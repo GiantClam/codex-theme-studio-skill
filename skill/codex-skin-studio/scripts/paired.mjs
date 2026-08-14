@@ -11,6 +11,7 @@ import { selectPetInChatGptDesktop } from "./pet-desktop.mjs";
 const BUNDLE_SCHEMA = 1;
 
 const json = (value) => JSON.stringify(value, null, 2);
+const pairedRoot = (root = appDataRoot()) => join(root, "CodexSkinStudio");
 
 async function readJson(file, code = "PAIR_BUNDLE_INVALID") {
   try { return JSON.parse(await readFile(file, "utf8")); }
@@ -52,6 +53,29 @@ async function directoryHash(directory) {
   return hash.digest("hex");
 }
 
+async function persistPairSource(directory, bundleId, root = appDataRoot()) {
+  const output = resolve(join(pairedRoot(root), "pairs", bundleId));
+  if (resolve(directory) === output) return output;
+  await mkdir(dirname(output), { recursive: true });
+  const staging = `${output}.staging-${process.pid}-${Date.now()}`;
+  const backup = `${output}.backup-${process.pid}-${Date.now()}`;
+  await rm(staging, { recursive: true, force: true });
+  await cp(directory, staging, { recursive: true, errorOnExist: true });
+  let hadOutput = false;
+  try {
+    try { await rename(output, backup); hadOutput = true; } catch (error) { if (error.code !== "ENOENT") throw error; }
+    await rename(staging, output);
+    if (hadOutput) await rm(backup, { recursive: true, force: true });
+    return output;
+  } catch (error) {
+    await rm(staging, { recursive: true, force: true });
+    if (hadOutput) {
+      try { await rename(backup, output); } catch {}
+    }
+    throw error;
+  }
+}
+
 export async function createPairBundle({ id, displayName, themeDir, petDir, out, contract, replace = false } = {}) {
   const bundleId = assertId(id, "bundle id");
   const sourceTheme = resolve(themeDir);
@@ -90,6 +114,7 @@ export async function createPairBundle({ id, displayName, themeDir, petDir, out,
 
 export async function switchPairBundle(directory, { contract, petsDir = defaultPetsDir(), port = 9341, replace = true, allowProvisional = false, nativePet = true, selectPetFn = selectPetInChatGptDesktop, commandApplyFn = commandApply, installPersistenceFn = installPersistenceWorker, appDataRootFn = appDataRoot } = {}) {
   const bundle = await validatePairBundle(directory, { contract, allowProvisional });
+  const persistedBundleDir = await persistPairSource(bundle.directory, bundle.id, appDataRootFn());
   const petInstall = await installPet(join(bundle.directory, bundle.bundle.petPath), { petsDir, contract, replace, allowProvisional, targetId: CUSTOM_PET_ID });
   const themeApplication = await commandApplyFn(join(bundle.directory, bundle.bundle.themePath), port, { installPersistenceFn });
   let petSelection;
@@ -105,18 +130,18 @@ export async function switchPairBundle(directory, { contract, petsDir = defaultP
   if (petSelection.selection === "native-ui-confirmed") {
     await recordPetSelection({ petsDir, petId: CUSTOM_PET_ID, selection: petSelection.selection, assetLoaded: petSelection.assetLoaded });
   }
-  const stateRoot = appDataRootFn();
+  const stateRoot = pairedRoot(appDataRootFn());
   await mkdir(stateRoot, { recursive: true });
   const pairedState = { schemaVersion: 1, bundleId: bundle.id, themeId: bundle.bundle.themeId, sourcePetId: bundle.bundle.petId, petId: CUSTOM_PET_ID, installedPetId: CUSTOM_PET_ID, switchedAt: new Date().toISOString(), themeStatus: themeApplication.status, petStatus: petInstall.status, petSelection: petSelection.selection, petUi: petSelection };
   await writeFile(join(stateRoot, "paired-state.json"), `${json(pairedState)}\n`);
   const selected = petSelection.selection === "native-ui-confirmed";
   const themeStatus = themeApplication.status === "applied" ? "theme-applied" : "theme-scheduled";
-  return { status: `${themeStatus}-pet-${selected ? "selected" : "refresh-required"}`, bundle: bundle.id, theme: themeApplication, pet: petInstall, petSelection, nextAction: selected ? "Confirm the matching ChatGPT Desktop Pet overlay is visible and animating." : "Open ChatGPT Desktop Settings > Pets > Refresh, choose the installed matching Pet, then confirm its overlay.", pairedState };
+  return { status: `${themeStatus}-pet-${selected ? "selected" : "refresh-required"}`, bundle: bundle.id, bundleDir: persistedBundleDir, theme: themeApplication, pet: petInstall, petSelection, nextAction: selected ? "Confirm the matching ChatGPT Desktop Pet overlay is visible and animating." : "Open ChatGPT Desktop Settings > Pets > Refresh, choose the installed matching Pet, then confirm its overlay.", pairedState };
 }
 
 export async function pairedStatus({ petsDir = defaultPetsDir(), port = 9341 } = {}) {
   let pairState = null;
-  try { pairState = await readJson(join(appDataRoot(), "paired-state.json")); } catch { pairState = null; }
+  try { pairState = await readJson(join(pairedRoot(), "paired-state.json")); } catch { pairState = null; }
   let theme;
   try { theme = await commandStatus(port); } catch (error) { theme = { status: "unavailable", message: error.message }; }
   return { status: "ok", pairState, theme, pet: await petStatus({ petsDir }) };

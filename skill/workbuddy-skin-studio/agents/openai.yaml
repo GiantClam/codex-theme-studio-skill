@@ -1,0 +1,3 @@
+display_name: "WorkBuddy Skin Studio"
+short_description: "Create and apply reversible local WorkBuddy skins on macOS and Windows"
+default_prompt: "Use $workbuddy-skin-studio to create or apply a local WorkBuddy theme. Validate compatibility with doctor, use loopback CDP only, require explicit restart confirmation before launching WorkBuddy with debugging enabled, and after a validated theme is created ask whether the user wants to upload it to the community. Never upload without an explicit yes."

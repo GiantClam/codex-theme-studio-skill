@@ -4,3 +4,4 @@ pet/
 .staging/
 output/*
 !output/codex-skin-studio.skill
+.gstack/

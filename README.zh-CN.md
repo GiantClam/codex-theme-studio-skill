@@ -8,6 +8,20 @@
 
 本项目仅将 [HeiGeAi/heige-codex-skin-studio](https://github.com/HeiGeAi/heige-codex-skin-studio) 作为研究和设计参考，独立实现轻量版本，不是对其完整仓库 Fork 后修改，也不宣称功能完全一致。网站现已独立维护于 [codex-theme-studio](https://github.com/GiantClam/codex-theme-studio)。
 
+## 实验性 WorkBuddy Skill
+
+仓库同时提供隔离的 `workbuddy-skin-studio` Skill，用于在 macOS 和 Windows
+上本地验证 WorkBuddy 换肤。它通过本机回环 CDP 连接
+`renderer/index.html`，使用已观察到的 `--cb-*` 变量，不修改 `app.asar`、安装文件、签名或官方 JavaScript。由于 WorkBuddy 没有公开自定义主题 API，且 Renderer 选择器可能随版本变化，该适配器仍属于实验性能力。
+
+构建命令：
+
+```bash
+npm run package:workbuddy-skin-studio
+```
+
+输出为 `output/workbuddy-skin-studio.skill`。应用前先运行 `doctor`；对普通非调试 WorkBuddy 实例应用主题时，必须明确确认重启。主题创建并校验后，Skill 会询问是否分享到社区，未经明确同意不会上传。真实 macOS 和 Windows 环境验证仍是发布门槛。
+
 当前应用名称是 ChatGPT Desktop。macOS 技术 Bundle ID 为 `com.openai.codex`；Windows 已支持官方独立版 Codex / ChatGPT Desktop 客户端，包括 Microsoft Store（MSIX）安装和普通可执行文件安装。运行时会自动发现客户端，不依赖具体用户名、盘符或 `WindowsApps` 路径。
 
 ## Windows 平台支持
@@ -19,7 +33,7 @@ Windows 平台已经支持 Codex / ChatGPT Desktop 换肤的完整流程：发�
 - 使用 Codex 原生生图能力编排文生皮肤。
 - 支持图生皮肤：直接使用背景、指定人物或物体保真合成、风格参考图、多图组合。
 - 固化五区视觉契约，保证侧栏、聊天区、输入框和主体空间可用。
-- 一次性生成 `hero`、`theme.json`、可选 Logo、可选肖像卡和品牌文案。
+- 一次性生成 `hero`、品牌名、匹配的 Pet、`theme.json` 和配套 Bundle；可选 Logo、肖像卡和品牌文案仍仅按请求生成。
 - 未提供 Logo 或显式品牌名时，自动使用主题名称生成左侧导航品牌名，并应用花式文字样式。
 - 品牌名样式会根据 Hero 的视觉语言选择 `anime`、`cyberpunk`、`editorial`、`military`、`mystic` 或 `romantic`，不再所有主题共用同一套字体和装饰。
 - 品牌名只替换顶部 workspace label，不误伤项目 Session 和账户区域。
@@ -30,7 +44,7 @@ Windows 平台已经支持 Codex / ChatGPT Desktop 换肤的完整流程：发�
 - `Skins` 菜单打开时和运行期间会自动刷新本地主题，新创建的主题无需重启 ChatGPT Desktop 即可出现。
 - 过大的 PNG/JPG 主背景会先在 Renderer 中解码并压缩为较小的 WebP Data URL，避免 CSS 过大导致背景规则被静默丢弃。
 - 主题生成阶段也会自动把 Hero、Logo、肖像卡转换为 `.webp` 并同步更新 `theme.json`。
-- 支持配套 Pet 生成：Pet 必须卡通化、拟人化、大头小身体，并组装为可校验的 Codex V2 8×11 RGBA PNG/WebP 精灵图，包含 16 个视角方向。
+- 默认对每个新生成皮肤同时生成匹配 Pet；Pet 必须卡通化、拟人化、大头小身体，并组装为可校验的 Codex V2 8×11 RGBA PNG/WebP 精灵图，包含 16 个视角方向。只有明确要求 theme-only 时才跳过 Pet。
 - 支持主题 + Pet 配套 Bundle、原子安装、本地状态查询和一次性配套切换命令。
 - 不修改 `app.asar`，不修改应用签名，不需要网站、数据库、远程服务或任意主题 CSS。
 - Skill 分发文件全部使用英文 ASCII；Skill 可以用中文或其他语言回复用户。
@@ -128,6 +142,30 @@ output/
 16:9 的 `hero.webp` 和匹配的 `theme.json`。它用于预览和开发；仍需用户
 明确执行 apply 请求后才会应用。
 
+### 通过用户 Prompt 导入主题包
+
+Skill 支持以下中文请求直接触发本地主题包导入：
+
+```text
+导入这个 theme package
+把我刚下载的主题 ZIP 加到 Skins
+应用我从 codexskinstudio.com/studio 下载的主题包
+```
+
+用户需要提供 ZIP 附件或本地绝对路径。Skill 会读取 ZIP，校验主题或配套
+Pet 包的 manifest、图片、路径和文件大小，然后通过正常应用流程安装。普通
+主题会保存到 `CodexSkinStudio/themes/<theme-id>` 并出现在 `Skins` 菜单中；
+配套 Pet 包会走 Pet 切换流程。
+
+底层命令格式为：
+
+```bash
+node "$SKIN_ROOT/scripts/remote-skins.mjs" import \
+  --package "/absolute/path/to/theme-package.zip" \
+  --confirm-install \
+  --json
+```
+
 ## 安装 Skill
 
 生成可分发的 Skill 包：
@@ -219,7 +257,9 @@ Skill 会先使用 Vision 检查图片，再明确标记主体角色，优先保
 
 Skill 会检查比例、安全区、对比度、文字和水印，然后再创建主题。
 
-### 配套生成主题与 Pet
+### 默认生成主题与 Pet
+
+生成皮肤时默认会同时生成主题和匹配 Pet。只有明确要求仅生成主题时才使用 theme-only 流程。
 
 示例请求：
 
@@ -247,7 +287,8 @@ Skill 会分别生成 Hero 和 Pet 动作帧，分别校验，创建配套 Bundl
 
 ## 一次性生成并应用
 
-获得最终 hero 并完成 Vision 检查后，可以用一个命令生成和应用主题：
+下面的低级命令仅用于用户明确要求的 theme-only 包。默认生成皮肤时，Skill
+还会生成匹配 Pet、校验 Pet，并通过 `create-paired.mjs` 创建配套 Bundle：
 
 ```bash
 node "$HOME/.codex/skills/codex-skin-studio/scripts/create-theme.mjs" \

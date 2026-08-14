@@ -1,6 +1,6 @@
 ---
 name: codex-skin-studio
-description: Design, generate, validate, apply, inspect, or remove single-image skins for ChatGPT Desktop on macOS or Windows. Supports text-to-image generation, direct background images, subject-preserving image composition, style-reference generation, and multi-image composition. Use when the user asks to reskin ChatGPT Desktop, create a desktop theme or background, preserve a person, product, or object from an image, derive a skin from a style reference, apply a generated workspace, inspect the active skin, or restore the native interface.
+description: Design, generate, validate, apply, inspect, or remove hero-led or paired theme and Pet skins for ChatGPT Desktop on macOS or Windows. Supports text-to-image generation, direct background images, subject-preserving image composition, style-reference generation, and multi-image composition. Use when the user asks to reskin ChatGPT Desktop, create a desktop theme or background, preserve a person, product, or object from an image, derive a skin from a style reference, apply a generated workspace, inspect the active skin, or restore the native interface.
 ---
 
 # ChatGPT Desktop Skin Studio
@@ -8,13 +8,15 @@ description: Design, generate, validate, apply, inspect, or remove single-image 
 Let Codex handle visual decisions. Delegate file validation, application discovery,
 restart orchestration, and CDP injection to `scripts/apply.mjs`.
 
-This Skill also supports an optional paired Pet workflow. A paired bundle contains
-one ChatGPT Desktop theme and one compatible Pet package. The theme is applied
-automatically and the Pet is installed locally. On supported ChatGPT Desktop
-builds, `switch-paired.mjs` uses the versioned visible Settings > Pets adapter to
-Refresh, select the matching Pet, and verify the selected row. It does not write
-private app state or modify application resources. If the visible UI is unavailable,
-the command keeps the theme result and returns a truthful manual-refresh fallback.
+Every generated skin is a paired bundle by default: one ChatGPT Desktop theme and
+one compatible Pet package. Generate a theme-only package only when the user
+explicitly asks for a theme without a Pet, a theme-only package, or equivalent.
+The theme is applied automatically and the Pet is installed locally. On supported
+ChatGPT Desktop builds, `switch-paired.mjs` uses the versioned visible Settings >
+Pets adapter to Refresh, select the matching Pet, and verify the selected row. It
+does not write private app state or modify application resources. If the visible UI
+is unavailable, the command keeps the theme result and returns a truthful
+manual-refresh fallback.
 
 The bundled default example is `examples/slayers-xellos-night/`. Use it as a
 known-good reference for the one-shot theme file layout and as the starter skin
@@ -27,6 +29,7 @@ automatic replacement for the user's active theme.
 - Never modify `app.asar`, the application bundle, the code signature, or official JavaScript.
 - Target ChatGPT Desktop on macOS or Windows. macOS uses the technical bundle identifier `com.openai.codex`; Windows uses the ChatGPT executable discovered from standard install locations, `where.exe`, or the Microsoft Store package install directory through PowerShell.
 - Generate without restarting when the user asks only for a design. When the user explicitly asks to apply or replace a skin, complete application and enable persistence for the selected theme.
+- When the user asks to generate or create a skin, generate a matching Pet by default, derive its character design from the theme brief, Hero, and brand treatment, and finish with a validated paired bundle. Do not wait for a separate Pet request. Use the theme-only workflow only after an explicit user request.
 - After a theme or paired skin package is successfully created and validated, pause and ask whether the user wants to upload it to the Codex Skin community. Never silently skip this consent step and never upload from generation alone.
 - Use the built-in `$imagegen` skill by default. When a generated or edited image is required, invoke `$imagegen` before creating theme files or running `apply.mjs`; do not treat a prompt such as "use imagegen" as a completed generation step.
 - `$imagegen` must use the native `image_gen` tool by default. Do not replace it with a Node script, an HTTP request, an OpenAI API call, or the CLI fallback. If native generation is unavailable or returns an error, report the exact error and ask for a final local background image. Do not request an API key or switch to an external image service automatically.
@@ -38,6 +41,7 @@ automatic replacement for the user's active theme.
 - Do not use one universal brand treatment. After inspecting the final Hero, choose a matching `--brand-style` preset from `anime`, `cyberpunk`, `editorial`, `military`, `mystic`, or `romantic` based on its visual signals: palette, materials, lighting, era, subject, and energy. Store the selected preset as `copy.brandStyle.preset` so the runtime can render theme-specific typography and decoration.
 - Keep the brand text clean: do not add `//`, slash separators, pipes, or synthetic punctuation to a generated brand name unless the user explicitly requests that exact text. Decorative lines may appear outside the text above, below, or at the sides; never cross through the glyphs.
 - The injected `Skins` menu must refresh the loopback `/themes` endpoint when opened and while it remains mounted, so a successfully created local theme appears without restarting ChatGPT Desktop or manually re-injecting CSS. Keep the initial injected list as a fallback when the optional control worker is unavailable.
+- When a `Skins` menu item has a matching local paired Bundle, switch the theme and its Pet as one operation: install or refresh the Bundle's Pet, select the stable Custom Pet slot through the visible native Pets UI, and verify `petSelection.selection === "native-ui-confirmed"` before reporting success. A theme-only result is not a successful paired switch.
 - Serialize theme application through the persistence worker. Do not allow the control endpoint and the background renderer-recovery loop to inject different themes at the same time.
 - Keep large raster assets usable in a Renderer stylesheet: decode the Hero first and compress oversized Hero data to a smaller WebP data URL before assigning CSS. Do not rely on a multi-megabyte PNG data URL surviving CSS parsing.
 - Write every distributed artifact, script comment, diagnostic, log message, example, and template in English ASCII. Reply in the user's language.
@@ -170,7 +174,7 @@ Use this gate for every workflow that is not `direct-background`:
 3. Combine the inputs in one generation prompt with the brand workbench contract: create a 16:9 landscape ChatGPT Desktop hero; reserve the left 26% for the brand logo and live navigation; keep the center immersive but readable behind the gradient safety layer; place the preserved subject or object in the right third with space for a brand information card; keep the bottom 20% low-contrast for the input workbench; treat the lower-right portrait card as optional and secondary.
 4. Do not add text, logos, watermarks, buttons, menus, fake panels, chat bubbles, or code unless the user explicitly requests them. Do not copy a reference image's subject or unique arrangement when its role is style or composition only.
 5. After generation, inspect the result with Vision for subject or object preservation, layout safety in the left sidebar and bottom composer zones, and UI contrast/readability. If any check fails, regenerate once with only the failed constraint strengthened.
-6. After the result passes inspection, create `hero.png` and `theme.json` in the theme directory. Add `logo.png` and/or `polaroid.png` only when the user explicitly requests those presentation assets. Do not retain input copies, reference images, cutouts, or intermediate files. When the user explicitly asks to apply the theme, validate and apply the directory with the provided script:
+6. After the result passes inspection, create `hero.png` and `theme.json` in the theme directory. Add `logo.png` and/or `polaroid.png` only when the user explicitly requests those presentation assets. Do not retain input copies, reference images, cutouts, or intermediate files. Continue with the default paired Pet workflow below before reporting the generated skin. Use the theme-only validation and apply commands only when the user explicitly requests a theme-only package:
 
 ```bash
 node "$SKILL_ROOT/scripts/apply.mjs" validate "/absolute/path/to/theme" --json
@@ -179,7 +183,7 @@ node "$SKILL_ROOT/scripts/apply.mjs" apply "/absolute/path/to/theme" --json
 
 ## Generate from text
 
-1. Create a visual brief covering theme, mood, palette, subject placement, safe zones, and prohibited content.
+1. Create a visual brief covering theme, mood, palette, subject placement, safe zones, prohibited content, and the matching Pet's character identity and motion language.
 2. Invoke `$imagegen` and use the native `image_gen` tool to generate a 16:9 landscape hero image.
 3. Follow the brand workbench contract: keep the left 26% quiet for the brand logo and dedicated navigation, make the center immersive but readable behind a gradient safety layer, place the main subject and optional brand information card in the right third, keep the bottom 20% low-contrast for the dedicated input workbench, and keep any portrait card secondary in the lower right.
 4. Keep important faces and objects out of the left sidebar safe zone. Avoid dense detail, bright highlights behind text, centered subjects, fake panels, cropped faces, text, logos, watermarks, buttons, chat bubbles, and code.
@@ -187,13 +191,13 @@ node "$SKILL_ROOT/scripts/apply.mjs" apply "/absolute/path/to/theme" --json
 
 ## One-shot theme output contract
 
-When the user asks to create a skin, finish the full file-producing workflow in one pass: obtain or generate the final hero, inspect it, derive colors, create the manifest and optional local assets, run validation, and report the resulting directory. Do not leave a partially written theme or ask the user to assemble files manually.
+When the user asks to create a skin, finish the full paired file-producing workflow in one pass: obtain or generate the final Hero, inspect it, derive colors and the brand name, generate a matching Pet canonical reference and action frames, assemble and validate the Pet against the observed contract, create and validate `theme.json`, create and validate the paired bundle, and report the bundle directory plus its theme and Pet contents. Do not leave a partially written theme, Pet, or bundle, and do not ask the user to assemble files manually. A theme-only output is permitted only after the user explicitly requests one.
 
-When the user asks to create and apply, use the one-shot apply path. Do not stop after writing files, and do not report success from a CDP command alone. The final evidence must be `application.status: "applied"` or a subsequent `status` result of `active`.
+When the user asks to create and apply, use the one-shot paired switch path. Do not stop after writing files, and do not report success from a CDP command alone. The final evidence must include an applied or active theme and either `petSelection.selection: "native-ui-confirmed"` with a loaded sprite asset or the truthful `refresh-required` manual fallback.
 
 ## Create theme files
 
-1. Decide the final theme id, display name, hero path, four colors, and any explicitly requested optional assets before writing files.
+1. Decide the final theme id, display name, matching Pet id, Hero path, four colors, and any explicitly requested optional assets before writing files. Use the same source id for the theme, Pet, and paired bundle unless a low-level migration requires otherwise.
 2. Create one clean output directory. For generated output, copy the final image returned by `$imagegen` from its reported local output path into that directory; never reference only the cache path. If no local output path is reported, ask for a final local background instead of guessing a cache filename.
 3. For a supplied or directly accepted image, copy it into the output directory as the hero asset.
 4. Derive six-digit hex values for `accent`, `secondary`, `surface`, and `text` from the final hero image.
@@ -219,15 +223,17 @@ node "$SKILL_ROOT/scripts/create-theme.mjs" \
 
 7. Add `--logo` and/or `--polaroid` only when the user explicitly requests those assets and provides or authorizes the source files. Without `--logo`, `create-theme.mjs` defaults `copy.brand` to the theme name; pass `--brand` to override it. Pass the selected preset with `--brand-style`; the manifest stores it as `copy.brandStyle.preset`. The manifest accepts optional `copy.headline` and `copy.tagline` strings.
 8. Keep every final asset as a non-empty local WebP file inside the theme directory. `create-theme.mjs` automatically converts the final Hero, logo, and portrait assets to WebP and updates the manifest; do not manually copy large PNG/JPEG files into the output. Do not add CSS, JavaScript, remote URLs, source copies, transparent intermediates, or reference images.
-9. Immediately run `validate` against the directory. Treat the returned JSON as the creation result and report the exact theme directory and files.
-10. If application was explicitly requested, use the same creator with `--apply` (and `--port` only when needed), or run `apply.mjs apply` immediately after creation. Poll `apply.mjs status` after a `scheduled` result until it is `active`, with a bounded wait. Never call a `scheduled` or `pending` result active.
+9. For the default generated-skin workflow, generate the matching Pet using the Pet visual, motion-continuity, and contract gates below. Run `validate-pet.mjs` immediately after assembly and fix failures before continuing.
+10. Run `validate` against the theme directory, then run `create-paired.mjs` with the validated theme and Pet directories. Validate the resulting bundle with `switch-paired.mjs` or `paired-status.mjs` as appropriate. Treat the bundle directory as the generated skin result. For an explicitly requested theme-only workflow, stop after the theme `validate` step.
+11. If application was explicitly requested, use `switch-paired.mjs` for the default paired result (or `apply.mjs apply` for an explicit theme-only result). Poll status after a `scheduled` result until it is `active`, with a bounded wait. Never call a `scheduled`, `pending`, or `refresh-required` result fully active or selected.
 
 On Windows, create the theme without `--apply`, then run
 `scripts/windows/apply.ps1 -ThemeDir <theme-dir> -Persist` from an external
 PowerShell process. Do not restart the Codex renderer from the current Agent
 process.
 
-For a single command after the final hero is ready:
+For an explicitly requested theme-only package, use a single command after the
+final Hero is ready:
 
 ```bash
 node "$SKILL_ROOT/scripts/create-theme.mjs" \
@@ -244,7 +250,10 @@ node "$SKILL_ROOT/scripts/create-theme.mjs" \
   --apply
 ```
 
-This command creates, validates, persists, and applies the theme. Its JSON `application.status` is authoritative. If it is `scheduled`, wait for `status` to become `active` before reporting completion.
+This command creates, validates, persists, and applies a theme-only package. Its
+JSON `application.status` is authoritative. If it is `scheduled`, wait for
+`status` to become `active` before reporting completion. Default generated skins
+must use the paired Pet workflow above.
 
 ## Share a theme with Codex Skin Archive
 
@@ -364,6 +373,22 @@ node "$SKILL_ROOT/scripts/remote-skins.mjs" list \
   --json
 ```
 
+When the user provides an official detail URL such as
+`https://codexskinstudio.com/skins/prometheus-stolen-fire`, including equivalent
+Chinese wording, validate that it uses the official
+`/skins/<theme-id>` format and install it directly:
+
+```bash
+node "$SKILL_ROOT/scripts/remote-skins.mjs" install \
+  --url "https://codexskinstudio.com/skins/prometheus-stolen-fire" \
+  --confirm-install \
+  --json
+```
+
+Do not pass arbitrary URLs as endpoints or download sources. The command still
+requires the published catalog record, short-lived download grant, checksum,
+and package validation before applying the theme.
+
 Only after the user agrees, install the selected slug:
 
 ```bash
@@ -402,10 +427,45 @@ The resulting ZIP is saved under the local `CodexSkinStudio/downloads`
 directory unless `--output` is supplied. A catalog fixture without a published
 package hash is intentionally metadata-only and cannot be installed.
 
-## Generate a paired Pet and theme
+## Import a local theme package from a user prompt
 
-Use this workflow when the user asks for a theme and a matching ChatGPT Desktop
-Pet, mascot, companion, or animated character.
+Treat prompts meaning `import this theme package`, `add my downloaded theme ZIP
+to Skins`, or `apply the ZIP I downloaded from codexskinstudio.com/studio`,
+including equivalent Chinese wording, as a local package import request. The user must
+provide an attached ZIP or an absolute local path. If the user says it was
+downloaded but gives no path, inspect the user's Downloads folder only when
+there is one unambiguous recent theme ZIP; otherwise ask for the path.
+
+After the user explicitly requests the import, run:
+
+```bash
+node "$SKILL_ROOT/scripts/remote-skins.mjs" import \
+  --package "/absolute/path/to/theme-package.zip" \
+  --confirm-install \
+  --json
+```
+
+The import command reads the local ZIP, infers its theme id from `theme.json`
+or `bundle.json`, rejects unsafe paths, symlinks, unsupported files, oversized
+content, invalid images, and mismatched theme or paired-Pet manifests, then
+installs it through the normal application path. A theme-only package is
+persisted under the platform's `CodexSkinStudio/themes/<theme-id>` directory
+and becomes available in the injected `Skins` menu. A paired package uses the
+existing Pet switch and reports `partially_installed` when the native Pet UI
+still needs Refresh.
+
+Do not copy the ZIP into `$HOME/.codex/skills/`, do not trust arbitrary ZIP
+contents, and do not manually apply a paired package as a theme-only package.
+If validation fails, report the exact error and leave the existing active skin
+unchanged.
+
+## Generate the default paired Pet and theme
+
+Use this workflow for every generated skin unless the user explicitly requests a
+theme-only package. The matching Pet is derived from the theme brief, Hero, and
+brand treatment even when the user did not mention a Pet, mascot, companion, or
+animated character. For a supplied direct background, derive the Pet from the
+background's visual language instead of treating the background as a Pet source.
 
 The local installation uses one stable Custom Pet slot:
 `codex-skin-studio-custom`. A theme or paired bundle may keep its own source Pet

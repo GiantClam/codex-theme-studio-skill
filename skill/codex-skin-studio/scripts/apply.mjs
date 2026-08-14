@@ -27,6 +27,7 @@ const BRAND_STYLE_PRESETS = Object.freeze({
   anime: { fontFamily: '"Impact", "Arial Narrow", "Helvetica Neue", sans-serif', fontStyle: "normal", fontWeight: 800, letterSpacing: "0.045em", textTransform: "uppercase", fontSize: "16px", fill: "linear-gradient(105deg, var(--codex-skin-accent), var(--codex-skin-text) 48%, var(--codex-skin-secondary))", decoration: "underline", shadow: "0 0 9px color-mix(in srgb, var(--codex-skin-accent) 48%, transparent)" },
   cyberpunk: { fontFamily: '"SFMono-Regular", "Cascadia Code", "JetBrains Mono", monospace', fontStyle: "normal", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", fontSize: "14px", fill: "linear-gradient(90deg, var(--codex-skin-accent), var(--codex-skin-secondary))", decoration: "glow", shadow: "0 0 5px var(--codex-skin-accent), 0 0 16px color-mix(in srgb, var(--codex-skin-secondary) 58%, transparent)" },
   editorial: { fontFamily: '"Avenir Next", "Helvetica Neue", Arial, sans-serif', fontStyle: "normal", fontWeight: 650, letterSpacing: "0.04em", textTransform: "none", fontSize: "16px", fill: "var(--codex-skin-text)", decoration: "underline", shadow: "none" },
+  "editorial-engraved": { fontFamily: '"Avenir Next", "Helvetica Neue", Arial, sans-serif', fontStyle: "normal", fontWeight: 650, letterSpacing: "0.04em", textTransform: "none", fontSize: "16px", fill: "var(--codex-skin-text)", decoration: "underline", shadow: "none" },
   military: { fontFamily: '"Arial Narrow", "Helvetica Neue", Arial, sans-serif', fontStyle: "normal", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", fontSize: "15px", fill: "linear-gradient(90deg, var(--codex-skin-secondary), var(--codex-skin-accent))", decoration: "double-line", shadow: "0 2px 0 color-mix(in srgb, var(--codex-skin-surface) 70%, transparent)" },
   mystic: { fontFamily: '"Baskerville", "Iowan Old Style", "Palatino Linotype", Georgia, serif', fontStyle: "italic", fontWeight: 700, letterSpacing: "0.015em", textTransform: "none", fontSize: "17px", fill: "linear-gradient(110deg, var(--codex-skin-accent), var(--codex-skin-text) 48%, var(--codex-skin-secondary))", decoration: "glow", shadow: "0 0 10px color-mix(in srgb, var(--codex-skin-accent) 42%, transparent)" },
   romantic: { fontFamily: '"Snell Roundhand", "Bradley Hand", "Segoe Print", cursive', fontStyle: "italic", fontWeight: 600, letterSpacing: "0.01em", textTransform: "none", fontSize: "18px", fill: "linear-gradient(105deg, var(--codex-skin-secondary), var(--codex-skin-text) 52%, var(--codex-skin-accent))", decoration: "underline", shadow: "0 2px 12px color-mix(in srgb, var(--codex-skin-secondary) 44%, transparent)" },
@@ -1111,10 +1112,44 @@ function switcherExpression(themes = []) {
             const items = [...list.querySelectorAll("[data-theme-item]")];
             items.forEach((entry) => { entry.disabled = true; });
             status.textContent = "Applying...";
-            window.open(${applyUrl} + "?id=" + encodeURIComponent(theme.id), "codex-skin-studio-apply", "popup,width=320,height=180");
-            status.textContent = "Switch request sent";
-            menu.hidden = true;
-            button.setAttribute("aria-expanded", "false");
+            let settled = false;
+            let timer = null;
+            const finish = (message, success = false) => {
+              if (settled) return;
+              settled = true;
+              if (timer) clearTimeout(timer);
+              window.removeEventListener("message", onMessage);
+              if (success) {
+                status.textContent = "Applied";
+                renderThemes();
+              } else {
+                status.textContent = "Switch failed: " + message;
+                items.forEach((entry) => { entry.disabled = false; });
+              }
+            };
+            const onMessage = (event) => {
+              const result = event.data;
+              if (!result || result.source !== "codex-skin-studio" || result.themeId !== theme.id) return;
+              if (result.status === "applied" && (!result.paired || result.petSelection === "native-ui-confirmed")) finish("Applied", true);
+              else if (result.status === "applied" && result.paired) finish("Theme applied, but the matching Pet was not selected");
+              else finish(result.message || (result.status === "scheduled" ? "Theme switch scheduled; restart required" : "Theme switch did not complete"));
+            };
+            window.addEventListener("message", onMessage);
+            const popup = window.open(${applyUrl} + "?id=" + encodeURIComponent(theme.id), "codex-skin-studio-apply", "popup,width=320,height=180");
+            if (!popup) {
+              finish("the local apply window was blocked; allow popups for Codex Desktop and retry");
+              return;
+            }
+            timer = setTimeout(() => finish("the local apply window did not confirm completion"), 15000);
+            const pollPopup = setInterval(() => {
+              if (!settled && popup.closed) finish("the local apply window closed before completion");
+              if (settled) clearInterval(pollPopup);
+            }, 250);
+            if (settled) clearInterval(pollPopup);
+            if (!settled) {
+              menu.hidden = true;
+              button.setAttribute("aria-expanded", "false");
+            }
           });
           list.appendChild(item);
         }

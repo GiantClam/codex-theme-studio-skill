@@ -63,6 +63,8 @@ function parseArgs(argv) {
     else if (arg === "--sort") options.sort = argv[++index];
     else if (arg === "--limit") options.limit = Number(argv[++index]);
     else if (arg === "--slug") options.slug = argv[++index];
+    else if (arg === "--url") options.url = argv[++index];
+    else if (arg === "--package") options.packagePath = argv[++index];
     else if (arg === "--output") options.output = argv[++index];
     else if (arg === "--port") options.port = Number(argv[++index]);
     else if (!arg.startsWith("-") && !options.slug) options.slug = arg;
@@ -80,6 +82,15 @@ function endpointUrl(value, path = "/") {
   const isLocal = url.protocol === "http:" && ["127.0.0.1", "localhost", "::1"].includes(url.hostname);
   if (!TRUSTED_ORIGINS.has(url.origin) && !(localAllowed && isLocal)) throw error("remote skin access is restricted to codexskinstudio.com", "UNTRUSTED_ENDPOINT");
   return new URL(path, url.origin + (url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`));
+}
+
+function slugFromSkinUrl(value) {
+  let url;
+  try { url = new URL(value); } catch { throw error("skin URL must be a valid URL", "INVALID_ARGUMENT"); }
+  if (!TRUSTED_ORIGINS.has(url.origin) || url.search || url.hash) throw error("skin URL must be an official codexskinstudio.com detail URL", "UNTRUSTED_ENDPOINT");
+  const match = url.pathname.match(/^\/skins\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/);
+  if (!match) throw error("skin URL must use the /skins/<theme-id> format", "INVALID_ARGUMENT");
+  return match[1];
 }
 
 function assertTrustedOrigin(value) {
@@ -260,7 +271,7 @@ function webPInfo(bytes) {
 function validateThemeManifest(manifest, slug, prefix = "") {
   if (!manifest || manifest.schemaVersion !== 1 || manifest.id !== slug || manifest.hero !== "hero.webp") throw error("theme manifest does not match the published skin", "PACKAGE_INVALID");
   for (const [field, expected] of [["logo", "logo.webp"], ["polaroid", "polaroid.webp"]]) {
-    if (manifest[field] !== undefined && manifest[field] !== expected) throw error(`theme ${field} must be ${expected}`, "PACKAGE_INVALID");
+    if (manifest[field] !== undefined && manifest[field] !== null && manifest[field] !== expected) throw error(`theme ${field} must be ${expected}`, "PACKAGE_INVALID");
   }
   return {
     manifest,
@@ -387,6 +398,28 @@ async function saveExtracted(parsed) {
     await writeFile(target, file, { mode: 0o600 });
   }
   return directory;
+}
+
+function packageSlug(parsed) {
+  const manifestPath = parsed.files.has("bundle.json") ? "bundle.json" : "theme.json";
+  const manifest = parseJson(parsed.files.get(manifestPath), manifestPath);
+  const slug = manifest.id;
+  if (typeof slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+    throw error("local skin package id must use lowercase letters, numbers, and hyphens", "PACKAGE_INVALID");
+  }
+  return slug;
+}
+
+async function importLocalPackage(packagePath) {
+  if (typeof packagePath !== "string" || !packagePath.trim()) throw error("local skin package path is required", "INVALID_ARGUMENT");
+  const path = resolve(packagePath);
+  let bytes;
+  try { bytes = new Uint8Array(await readFile(path)); }
+  catch (caught) { throw error(`local skin package could not be read: ${caught.message}`, "PACKAGE_READ_FAILED"); }
+  const parsed = parseZip(bytes);
+  const slug = packageSlug(parsed);
+  const packageInfo = validatePackage(parsed, slug);
+  return { path, bytes, parsed, packageInfo, manifest: packageInfo.manifest, slug, packageSha256: hash(bytes) };
 }
 
 async function runApply(command, directory, port) {
@@ -574,7 +607,25 @@ async function main() {
     printResult(await listSkins(options), options.json);
     return;
   }
-  if (options.command !== "install") throw error("usage: remote-skins.mjs recommend --prompt \"...\" [filters] | list [filters] | install --slug <slug> --confirm-install [--download-only]", "INVALID_ARGUMENT");
+  if (options.command === "import") {
+    if (!options.packagePath) throw error("local skin package path is required", "INVALID_ARGUMENT");
+    if (!options.confirmInstall) throw error("explicit installation consent is required; pass --confirm-install only after the user agrees", "CONFIRMATION_REQUIRED");
+    const imported = await importLocalPackage(options.packagePath);
+    const directory = await saveExtracted(imported.parsed);
+    try {
+      const installed = await installExtractedPackage(directory, imported.packageInfo, { port: options.port });
+      printResult({ ...installed, path: imported.path, slug: imported.slug, title: imported.manifest.name, packageSha256: imported.packageSha256, hasPet: imported.packageInfo.hasPet, pet: imported.packageInfo.kind === "paired" ? { id: imported.packageInfo.petManifest.id, displayName: imported.packageInfo.petManifest.displayName, contractVersion: imported.packageInfo.contract.contractVersion } : undefined }, options.json);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+    return;
+  }
+  if (options.command !== "install") throw error("usage: remote-skins.mjs recommend --prompt \"...\" [filters] | list [filters] | install --slug <slug> | install --url <url> --confirm-install [--download-only] | import --package <path> --confirm-install", "INVALID_ARGUMENT");
+  if (options.url) {
+    const urlSlug = slugFromSkinUrl(options.url);
+    if (options.slug && options.slug !== urlSlug) throw error("skin URL and slug refer to different themes", "INVALID_ARGUMENT");
+    options.slug = urlSlug;
+  }
   if (!options.slug) throw error("skin slug is required", "INVALID_ARGUMENT");
   if (!options.confirmInstall) throw error("explicit installation consent is required; pass --confirm-install only after the user agrees", "CONFIRMATION_REQUIRED");
   const downloaded = await downloadPublishedSkin(options.endpoint, options.slug);
@@ -594,7 +645,7 @@ async function main() {
   }
 }
 
-export { classifyPairedInstallResult, downloadPublishedSkin, endpointUrl, installExtractedPackage, listSkins, normalizeCatalogItem, parseArgs, parseZip, rankRecommendation, requestDownloadGrant, saveExtracted, validatePackage };
+export { classifyPairedInstallResult, downloadPublishedSkin, endpointUrl, importLocalPackage, installExtractedPackage, listSkins, normalizeCatalogItem, packageSlug, parseArgs, parseZip, rankRecommendation, requestDownloadGrant, saveExtracted, slugFromSkinUrl, validatePackage };
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch((caught) => {

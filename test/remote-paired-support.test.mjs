@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { createHash, createHmac } from "node:crypto";
-import { readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { dirname, join, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { once } from "node:events";
@@ -16,6 +17,7 @@ import {
 } from "../skill/codex-skin-studio/scripts/upload-theme.mjs";
 import {
   classifyPairedInstallResult,
+  importLocalPackage,
   installExtractedPackage,
   normalizeCatalogItem,
   parseArgs as parseRemoteArgs,
@@ -23,6 +25,7 @@ import {
   rankRecommendation,
   recommendSkins,
   saveExtracted,
+  slugFromSkinUrl,
   validatePackage,
 } from "../skill/codex-skin-studio/scripts/remote-skins.mjs";
 
@@ -170,6 +173,58 @@ test("prompt recommendations expose trusted preview and detail links without per
   assert.equal(item.downloadRequiresGrant, true);
   assert.equal(rankRecommendation(item, "anime cyan").recommendationReason.includes("category:anime-2d"), true);
   await assert.rejects(recommendSkins({ endpoint: "https://codexskinstudio.com", limit: 3 }), /non-empty --prompt/);
+});
+
+test("official skin URLs resolve to installable slugs without accepting arbitrary origins", () => {
+  assert.equal(slugFromSkinUrl("https://codexskinstudio.com/skins/prometheus-stolen-fire"), "prometheus-stolen-fire");
+  assert.equal(slugFromSkinUrl("https://www.codexskinstudio.com/skins/prometheus-stolen-fire/"), "prometheus-stolen-fire");
+  assert.throws(() => slugFromSkinUrl("https://example.com/skins/prometheus-stolen-fire"), /official/);
+  assert.throws(() => slugFromSkinUrl("https://codexskinstudio.com/download/prometheus-stolen-fire"), /format/);
+});
+
+test("local theme packages can be imported from a prompt-provided ZIP path", async () => {
+  assert.deepEqual(parseRemoteArgs(["import", "--package", "/tmp/theme.zip", "--confirm-install", "--json"]), {
+    command: "import",
+    endpoint: "https://codexskinstudio.com",
+    json: true,
+    limit: 24,
+    port: 9341,
+    packagePath: "/tmp/theme.zip",
+    confirmInstall: true,
+  });
+
+  const prepared = await prepareUploadPackage({
+    themeDir: join(ROOT, "skill", "codex-skin-studio", "examples", "slayers-xellos-night"),
+  });
+  const root = await mkdtemp(join(tmpdir(), "codex-local-theme-"));
+  const packagePath = join(root, "theme.zip");
+  try {
+    await writeFile(packagePath, prepared.packageBytes);
+    const imported = await importLocalPackage(packagePath);
+    assert.equal(imported.slug, "slayers-xellos-night");
+    assert.equal(imported.packageInfo.kind, "theme");
+    assert.equal(imported.manifest.name, "Slayers Xellos Night");
+    assert.equal(imported.packageSha256.length, 64);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("official theme packages may omit optional assets with null manifest fields", () => {
+  const slug = "prometheus-stolen-fire";
+  const parsed = parseZip(storedZip({
+    "theme.json": JSON.stringify({
+      schemaVersion: 1,
+      id: slug,
+      name: "Prometheus / Stolen Fire",
+      hero: "hero.webp",
+      logo: null,
+      polaroid: null,
+      copy: { brand: "PROMETHEUS // FIREBRINGER", brandStyle: { preset: "editorial-engraved" } },
+    }),
+    "hero.webp": "RIFFxxxxWEBP",
+  }));
+  assert.equal(validatePackage(parsed, slug, { packageKind: "theme", hasPet: false }).kind, "theme");
 });
 
 test("legacy theme packaging remains compatible with the legacy archive validator", async () => {

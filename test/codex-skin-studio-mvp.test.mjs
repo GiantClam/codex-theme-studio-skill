@@ -227,6 +227,12 @@ test("emits the local skin switcher button and control routes", () => {
   assert.match(expression, /127\.0\.0\.1:9342\/themes/);
   assert.match(expression, /Miku/);
   assert.match(expression, /window\.open/);
+  assert.match(expression, /addEventListener\("message"/);
+  assert.match(expression, /result\.source !== "codex-skin-studio"/);
+  assert.match(expression, /the local apply window was blocked/);
+  assert.match(expression, /the local apply window did not confirm completion/);
+  assert.match(expression, /Switch failed:/);
+  assert.match(expression, /setInterval/);
   assert.match(expression, /Switch ChatGPT Desktop skin/);
   assert.match(expression, /shell\?\.remove\(\);\s+shell = null/);
   assert.match(expression, /MutationObserver/);
@@ -259,8 +265,28 @@ test("parses the local switcher control port and exposes a loopback control serv
   const response = await fetch(`${base}/apply`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: "miku" }) });
   assert.deepEqual(await response.json(), { status: "applied", themeId: "miku" });
   const popup = await fetch(`${base}/apply?id=miku`);
-  assert.match(await popup.text(), /window\.close/);
+  const popupHtml = await popup.text();
+  assert.match(popupHtml, /window\.close/);
+  assert.match(popupHtml, /postMessage/);
   assert.deepEqual(applied, [{ themeDir: "/tmp/miku", port: 9341 }, { themeDir: "/tmp/miku", port: 9341 }]);
+});
+
+test("switches a paired theme and Pet together through the local control server", async (t) => {
+  const calls = [];
+  const server = createControlServer({
+    listThemesFn: async () => [{ id: "paired", name: "Paired", themeDir: "/tmp/paired", colors: validManifest.colors }],
+    pairDirectoryFn: async () => "/tmp/paired-bundle",
+    switchPairFn: async (directory, options) => {
+      calls.push({ directory, port: options.port, nativePet: options.nativePet, installPersistenceFn: options.installPersistenceFn });
+      return { status: "theme-applied-pet-selected", theme: { status: "applied", themeId: "paired" }, pet: { status: "installed" }, petSelection: { selection: "native-ui-confirmed", petId: "codex-skin-studio-custom" } };
+    },
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const response = await fetch(`${base}/apply`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: "paired" }) });
+  assert.deepEqual(await response.json(), { status: "applied", themeId: "paired", paired: true, petSelection: "native-ui-confirmed", petId: "codex-skin-studio-custom", theme: { status: "applied", themeId: "paired" }, pet: { status: "installed" } });
+  assert.deepEqual(calls, [{ directory: "/tmp/paired-bundle", port: 9341, nativePet: true, installPersistenceFn: null }]);
 });
 
 test("serializes control-server skin applications with the shared apply lock", async (t) => {
@@ -460,6 +486,38 @@ test("persistence startup launches a selected theme with loopback CDP", async ()
   });
   assert.equal(result.status, "launched");
   assert.deepEqual(launch, ["/Applications/ChatGPT.app", 9341, "darwin", false]);
+});
+
+test("persistence startup restarts an already-open app when CDP is unavailable", async () => {
+  let restarted = null;
+  const result = await ensureAppAtStartup({
+    port: 9341,
+    platformFn: () => "darwin",
+    readStateFn: async () => ({ themeId: "miku", themeDir: "/tmp/miku" }),
+    discoverFn: () => "/Applications/ChatGPT.app",
+    appInfoFn: () => ({ valid: true, executable: "ChatGPT" }),
+    processIdsFn: async () => [321],
+    targetsFn: async () => { throw new Error("fetch failed"); },
+    restartWorkerFn: async (port) => { restarted = port; },
+  });
+  assert.equal(result.status, "restarted");
+  assert.equal(restarted, 9341);
+});
+
+test("persistence startup keeps an already-open app when CDP is available", async () => {
+  let restarted = false;
+  const result = await ensureAppAtStartup({
+    port: 9341,
+    platformFn: () => "darwin",
+    readStateFn: async () => ({ themeId: "miku", themeDir: "/tmp/miku" }),
+    discoverFn: () => "/Applications/ChatGPT.app",
+    appInfoFn: () => ({ valid: true, executable: "ChatGPT" }),
+    processIdsFn: async () => [321],
+    targetsFn: async () => [{ type: "page" }],
+    restartWorkerFn: async () => { restarted = true; },
+  });
+  assert.equal(result.status, "already-running");
+  assert.equal(restarted, false);
 });
 
 test("persistence recovers a manually opened app without CDP", async () => {
@@ -1641,7 +1699,8 @@ test("paired switch records a native Pet selection postcondition", async () => {
     assert.equal(result.petSelection.petId, CUSTOM_PET_ID);
     assert.equal((await petStatus({ petsDir: join(root, "pets") })).selection, "native-ui-confirmed");
     assert.equal((await petStatus({ petsDir: join(root, "pets") })).assetLoaded, true);
-    assert.equal(JSON.parse(await readFile(join(root, "app-data", "paired-state.json"), "utf8")).petUi.selection, "native-ui-confirmed");
+    assert.equal(result.bundleDir, join(root, "app-data", "CodexSkinStudio", "pairs", "paired-demo"));
+    assert.equal(JSON.parse(await readFile(join(root, "app-data", "CodexSkinStudio", "paired-state.json"), "utf8")).petUi.selection, "native-ui-confirmed");
   });
 });
 
@@ -1682,6 +1741,11 @@ test("distribution files are English ASCII text and SKILL has valid frontmatter"
   assert.match(skill, /dedicated input workbench/);
   assert.match(skill, /optional portrait card as a secondary non-core accent/);
   assert.match(skill, /One-shot theme output contract/);
+  assert.match(skill, /Every generated skin is a paired bundle by default/);
+  assert.match(skill, /generate a matching Pet by default/);
+  assert.match(skill, /When a `Skins` menu item has a matching local paired Bundle, switch the theme and its Pet as one operation/);
+  assert.match(skill, /petSelection\.selection === "native-ui-confirmed"/);
+  assert.match(skill, /theme-only output is permitted only after the user explicitly requests one/);
   assert.match(skill, /create-theme\.mjs/);
   assert.match(skill, /persist\.mjs.*install/);
   assert.match(skill, /pause and ask whether the user wants to upload/);
