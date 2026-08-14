@@ -1,6 +1,6 @@
 ---
 name: codex-skin-studio
-description: Design, generate, validate, apply, inspect, or remove hero-led or paired theme and Pet skins for ChatGPT Desktop on macOS or Windows. Supports text-to-image generation, direct background images, subject-preserving image composition, style-reference generation, and multi-image composition. Use when the user asks to reskin ChatGPT Desktop, create a desktop theme or background, preserve a person, product, or object from an image, derive a skin from a style reference, apply a generated workspace, inspect the active skin, or restore the native interface.
+description: Design, generate, validate, apply, inspect, or remove hero-led or paired theme and Pet skins for ChatGPT Desktop on macOS or Windows, and share/download reviewed Codex, ChatGPT Desktop, or WorkBuddy skin packages. Supports text-to-image generation, direct background images, subject-preserving image composition, style-reference generation, and multi-image composition. Use when the user asks to reskin ChatGPT Desktop, create a desktop theme or background, create a WorkBuddy skin package, preserve a person, product, or object from an image, derive a skin from a style reference, apply a generated workspace, inspect the active skin, or restore the native interface.
 ---
 
 # ChatGPT Desktop Skin Studio
@@ -257,13 +257,13 @@ must use the paired Pet workflow above.
 
 ## Share a theme with Codex Skin Archive
 
-Uploading is skill-only. Do not direct the user to a website submit page and do not upload a package without an explicit yes. This confirmation is a required post-generation step for both theme-only and paired theme + Pet packages. After the package has been created and validated, show the user the exact editable sharing metadata and pause for an answer:
+Uploading is skill-only. Do not direct the user to a website submit page and do not upload a package without an explicit yes. This confirmation is a required post-generation step for theme-only, WorkBuddy-targeted, and paired theme + Pet packages. After the package has been created and validated, show the user the exact editable sharing metadata and pause for an answer:
 
 `Upload this theme to codexskinstudio.com and share it with other users?`
 
-The user may change the title, slug, summary, version, targets, categories, palette, display name, GitHub source URL, or license before answering. The display name and GitHub URL are the creator-promotion fields; never put a private email address, access token, or secret in them. If the user declines, keep the theme local and finish the normal apply or preview workflow.
+The user may change the title, slug, summary, version, targets (`codex`, `chatgpt`, `workbuddy`), categories, palette, display name, GitHub source URL, or license before answering. The display name and GitHub URL are the creator-promotion fields; never put a private email address, access token, or secret in them. If the user declines, keep the theme local and finish the normal apply or preview workflow.
 
-Only after an explicit acceptance, call the upload helper. For a theme-only package it performs a second local validation and builds a minimal ZIP containing `theme.json`, `hero.webp`, and explicitly declared optional assets. For a paired bundle it validates the bundle and contract, then builds the canonical ZIP containing `bundle.json`, `pet-contract.json`, `theme/theme.json`, `theme/hero.webp`, `pet/pet.json`, and the contract-selected Pet spritesheet. Both forms sign the request and report the server's `pending_review` result; upload never means that the skin is published.
+Only after an explicit acceptance, call the upload helper. For a theme-only package it performs a second local validation and builds a minimal ZIP containing `theme.json`, `hero.webp`, and explicitly declared optional assets. For a paired bundle it validates the bundle and contract, then builds the canonical ZIP containing `bundle.json`, `pet-contract.json`, `theme/theme.json`, `theme/hero.webp`, `pet/pet.json`, and the contract-selected Pet spritesheet. Both forms sign the request and report the server's `pending_review` result; upload never means that the skin is published. WorkBuddy uploads use the same platform review gate and appear in public browse/download results only after publication.
 
 ```bash
 node "$SKILL_ROOT/scripts/upload-theme.mjs" \
@@ -272,7 +272,7 @@ node "$SKILL_ROOT/scripts/upload-theme.mjs" \
   --slug "theme-id" \
   --summary "A concise public description." \
   --version "1.0.0" \
-  --targets "codex,chatgpt" \
+  --targets "codex,chatgpt,workbuddy" \
   --categories "anime-2d,cyber-ui" \
   --palette "cyan,mixed" \
   --author "Creator or studio name" \
@@ -292,7 +292,7 @@ node "$SKILL_ROOT/scripts/upload-theme.mjs" \
   --slug "paired-id" \
   --summary "A theme and matching desktop Pet." \
   --version "1.0.0" \
-  --targets "codex,chatgpt" \
+  --targets "codex,chatgpt,workbuddy" \
   --categories "anime-2d,cyber-ui" \
   --palette "cyan,mixed" \
   --author "Creator or studio name" \
@@ -335,7 +335,8 @@ node "$SKILL_ROOT/scripts/apply.mjs" apply "/absolute/path/to/theme" --json
 Cloud skins are read and installed through the Skill. The website exposes only
 skins whose Payload status is `published`; drafts and `pending_review` records
 are never returned by the public catalog API. The read/download flow does not
-need a login or an upload secret.
+need a login or an upload secret. WorkBuddy catalog reads and ZIP downloads use
+the same published-only flow as Codex and ChatGPT Desktop.
 
 When the user provides a natural-language prompt such as `anime cyan`,
 `cyberpunk developer workspace`, or a Chinese description, use the prompt
@@ -369,6 +370,19 @@ and whether the package is installable. Then ask for explicit confirmation:
 node "$SKILL_ROOT/scripts/remote-skins.mjs" list \
   --query "cyber" \
   --target codex \
+  --sort downloads \
+  --json
+```
+
+For WorkBuddy-only requests, use the same catalog command with
+`--target workbuddy`. Until a local WorkBuddy apply adapter is present in this
+Skill, use `--download-only` for WorkBuddy-only packages instead of applying
+them to ChatGPT Desktop:
+
+```bash
+node "$SKILL_ROOT/scripts/remote-skins.mjs" list \
+  --query "cyber" \
+  --target workbuddy \
   --sort downloads \
   --json
 ```

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash, createHmac } from "node:crypto";
 import { createServer } from "node:http";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -21,8 +22,27 @@ import {
   targets,
   validateManifest,
 } from "../skill/workbuddy-skin-studio/scripts/workbuddy.mjs";
+import { uploadTheme } from "../skill/workbuddy-skin-studio/scripts/upload-theme.mjs";
+import { recommendSkins } from "../skill/workbuddy-skin-studio/scripts/remote-skins.mjs";
 
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
+
+function webpVp8xHeader(width = 1600, height = 900) {
+  const bytes = new Uint8Array(30);
+  const view = new DataView(bytes.buffer);
+  bytes.set(new TextEncoder().encode("RIFF"), 0);
+  view.setUint32(4, bytes.length - 8, true);
+  bytes.set(new TextEncoder().encode("WEBPVP8X"), 8);
+  view.setUint32(16, 10, true);
+  const writeUint24 = (offset, value) => {
+    bytes[offset] = value & 0xff;
+    bytes[offset + 1] = (value >>> 8) & 0xff;
+    bytes[offset + 2] = (value >>> 16) & 0xff;
+  };
+  writeUint24(24, width - 1);
+  writeUint24(27, height - 1);
+  return bytes;
+}
 
 async function withTheme(callback) {
   const root = await mkdtemp(join(tmpdir(), "workbuddy-skin-"));
@@ -125,4 +145,66 @@ test("status and pause use the same mock CDP contract", async () => {
 
 test("lists only valid local themes", async () => {
   await withTheme(async (themeDir) => { const themes = await listThemes(join(themeDir, "..")); assert.equal(themes.length, 1); assert.equal((await loadTheme(themeDir)).manifest.id, "test-theme"); });
+});
+
+test("uploads WorkBuddy themes with explicit consent and pending-review metadata", async () => {
+  const root = await mkdtemp(join(tmpdir(), "workbuddy-upload-"));
+  const secret = "workbuddy-upload-secret";
+  let received;
+  const server = createServer(async (request, response) => {
+    try {
+      const webRequest = new Request(`http://127.0.0.1${request.url}`, { method: request.method, headers: request.headers, body: request, duplex: "half" });
+      const form = await webRequest.formData();
+      const metadataJson = String(form.get("metadata"));
+      const packageBytes = new Uint8Array(await form.get("package").arrayBuffer());
+      const timestamp = String(request.headers["x-codex-skin-timestamp"]);
+      const requestId = String(request.headers["x-codex-skin-request-id"]);
+      const packageHash = createHash("sha256").update(packageBytes).digest("hex");
+      const metadataHash = createHash("sha256").update(metadataJson).digest("hex");
+      received = {
+        metadata: JSON.parse(metadataJson),
+        signature: request.headers["x-codex-skin-signature"],
+        expectedSignature: createHmac("sha256", secret).update(["POST", "/api/submit", timestamp, requestId, packageHash, metadataHash].join("\n")).digest("hex"),
+      };
+      response.writeHead(201, { "content-type": "application/json" });
+      response.end(JSON.stringify({ ok: true, slug: "workbuddy-focus" }));
+    } catch (error) {
+      response.writeHead(500, { "content-type": "application/json" });
+      response.end(JSON.stringify({ error: error.message }));
+    }
+  });
+  try {
+    await writeFile(join(root, "hero.webp"), webpVp8xHeader());
+    await writeFile(join(root, "theme.json"), JSON.stringify({ schemaVersion: 1, id: "workbuddy-focus", name: "WorkBuddy Focus", hero: "hero.webp", colors: { accent: "#24C9D7", secondary: "#EF8FD3", surface: "#10202A", text: "#FFFFFF" } }));
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const result = await uploadTheme({ themeDir: root, endpoint: `http://127.0.0.1:${server.address().port}/api/submit`, secret, confirmShare: true });
+    assert.equal(result.status, "pending_review");
+    assert.deepEqual(received.metadata.targets, ["workbuddy"]);
+    assert.equal(received.signature, received.expectedSignature);
+  } finally {
+    server.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("recommends WorkBuddy catalog entries by default", async () => {
+  let requestedUrl;
+  const previous = process.env.CODEX_SKIN_STUDIO_ALLOW_LOCAL_ENDPOINT;
+  const server = createServer((request, response) => {
+    requestedUrl = request.url;
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({ items: [{ slug: "workbuddy-focus", title: "WorkBuddy Focus", summary: "Focus mode", version: "1.0.0", targets: ["workbuddy"], categories: ["minimal"], palette: ["mixed"], downloads: 12, installable: true }] }));
+  });
+  try {
+    process.env.CODEX_SKIN_STUDIO_ALLOW_LOCAL_ENDPOINT = "1";
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const result = await recommendSkins({ endpoint: `http://127.0.0.1:${server.address().port}`, prompt: "focus", limit: 3 });
+    assert.equal(result.target, "workbuddy");
+    assert.match(requestedUrl, /target=workbuddy/);
+    assert.equal(result.recommendations[0].slug, "workbuddy-focus");
+  } finally {
+    server.close();
+    if (previous === undefined) delete process.env.CODEX_SKIN_STUDIO_ALLOW_LOCAL_ENDPOINT;
+    else process.env.CODEX_SKIN_STUDIO_ALLOW_LOCAL_ENDPOINT = previous;
+  }
 });

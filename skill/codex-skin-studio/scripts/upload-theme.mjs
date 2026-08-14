@@ -11,6 +11,7 @@ import { loadPetContract } from "./pet.mjs";
 
 const SKILL_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const APPLY = join(SKILL_ROOT, "scripts", "apply.mjs");
+const ALLOWED_TARGETS = new Set(["codex", "chatgpt", "workbuddy"]);
 
 function fail(error) {
   const message = error instanceof Error ? error.message : String(error);
@@ -54,6 +55,13 @@ function text(value, fallback = "") {
 
 function list(value, fallback) {
   return text(value, fallback).split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function targetList(value, fallback) {
+  const targets = list(value, fallback);
+  const unsupported = targets.filter((target) => !ALLOWED_TARGETS.has(target));
+  if (unsupported.length > 0) throw new Error(`unsupported target: ${unsupported.join(", ")}`);
+  return [...new Set(targets)];
 }
 
 function crc32(input) {
@@ -239,7 +247,7 @@ async function main() {
     slug: text(options.slug, manifest.id),
     summary: text(options.summary, manifest.copy?.tagline || `A community theme package for ${manifest.name}.`),
     version: text(options.version, "1.0.0"),
-    targets: list(options.targets, "codex,chatgpt"),
+    targets: targetList(options.targets, "codex,chatgpt"),
     categories: list(options.categories, "cyber-ui"),
     palette: list(options.palette, "mixed"),
     authorDisplayName: text(options.authorDisplayName, manifest.copy?.brand || "Community contributor"),

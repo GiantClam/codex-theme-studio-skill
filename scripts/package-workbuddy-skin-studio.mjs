@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SOURCE = join(ROOT, "skill", "workbuddy-skin-studio");
 const OUTPUT = join(ROOT, "output", "workbuddy-skin-studio.skill");
-export const EXPECTED = ["SKILL.md", "agents/openai.yaml", "scripts/create-theme.mjs", "scripts/image-metadata.mjs", "scripts/workbuddy.mjs", "templates/theme.json"];
+export const EXPECTED = ["SKILL.md", "agents/openai.yaml", "scripts/create-theme.mjs", "scripts/image-metadata.mjs", "scripts/remote-skins.mjs", "scripts/upload-theme.mjs", "scripts/workbuddy.mjs", "templates/theme.json"];
 
 function u16(value) { const bytes = Buffer.alloc(2); bytes.writeUInt16LE(value); return bytes; }
 function u32(value) { const bytes = Buffer.alloc(4); bytes.writeUInt32LE(value >>> 0); return bytes; }

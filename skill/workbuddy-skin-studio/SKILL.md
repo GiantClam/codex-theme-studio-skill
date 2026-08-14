@@ -55,6 +55,41 @@ Keep images and theme metadata local by default. Use only assets the user is aut
 
 After a user creates and validates a theme, present the theme id, display name, summary, palette, and local directory. Then ask whether they want to upload it to the community. This is the same consent boundary as the Codex Skin Studio flow: do not upload, publish, or call a sharing endpoint without an explicit yes. A no or no response leaves the theme local.
 
+Use the shared upload helper with `--targets workbuddy` only after explicit consent:
+
+```bash
+node "$SKILL_ROOT/scripts/upload-theme.mjs" \
+  --theme-dir "/absolute/path/to/theme-id" \
+  --title "Theme Name" \
+  --slug "theme-id" \
+  --summary "A concise public description." \
+  --version "1.0.0" \
+  --targets "workbuddy" \
+  --categories "minimal" \
+  --palette "mixed" \
+  --author "Creator or studio name" \
+  --confirm-share \
+  --json
+```
+
+The server returns `pending_review` for accepted WorkBuddy submissions. Upload
+does not mean published: the platform must review and publish the skin before it
+appears in public catalog or download results.
+
+Published WorkBuddy skins use the same read/download path:
+
+```bash
+node "$SKILL_ROOT/scripts/remote-skins.mjs" list \
+  --target workbuddy \
+  --json
+
+node "$SKILL_ROOT/scripts/remote-skins.mjs" install \
+  --slug "theme-id" \
+  --confirm-install \
+  --download-only \
+  --json
+```
+
 ## Reporting
 
 Do not claim runtime success from static checks. In this repository, report real WorkBuddy verification separately from local tests. Real acceptance requires, on both macOS and Windows, `doctor -> apply -> status -> pause` against the installed WorkBuddy client and at least one current release. Because renderer selectors and `--cb-*` variables are implementation evidence rather than an official API, re-run this smoke test after WorkBuddy updates.

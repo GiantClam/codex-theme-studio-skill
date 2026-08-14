@@ -342,6 +342,10 @@ function validatePublicMetadata(packageInfo, metadata = {}) {
   return packageInfo;
 }
 
+function supportsChatGptOrCodex(metadata = {}) {
+  return Array.isArray(metadata.targets) && metadata.targets.some((target) => target === "chatgpt" || target === "codex");
+}
+
 function validatePackage(parsed, slug, publicMetadata = {}) {
   const packageInfo = parsed.files.has("bundle.json") ? validatePairedPackage(parsed, slug) : validateLegacyPackage(parsed, slug);
   return validatePublicMetadata(packageInfo, publicMetadata);
@@ -572,7 +576,7 @@ function rankRecommendation(item, prompt) {
 export async function recommendSkins(options) {
   const prompt = typeof options.prompt === "string" ? options.prompt.trim() : "";
   if (!prompt) throw error("recommend requires a non-empty --prompt", "INVALID_ARGUMENT");
-  const target = options.target || "chatgpt";
+  const target = options.target || (/\bworkbuddy\b/i.test(prompt) ? "workbuddy" : "chatgpt");
   const direct = await listSkins({ ...options, query: prompt, target, sort: options.sort || "downloads" });
   let items = direct.items.map((item) => rankRecommendation(item, prompt));
   if (items.length === 0) {
@@ -636,6 +640,7 @@ async function main() {
     printResult({ status: "downloaded", slug: options.slug, title: downloaded.detail.title, path: target, packageKind: downloaded.packageInfo.kind, hasPet: downloaded.packageInfo.hasPet, packageSha256: downloaded.packageSha256 }, options.json);
     return;
   }
+  if (!supportsChatGptOrCodex(downloaded.detail)) throw error("this skin targets WorkBuddy only; download it with --download-only until a local WorkBuddy apply adapter is available", "WORKBUDDY_APPLY_UNAVAILABLE");
   const directory = await saveExtracted(downloaded.parsed, downloaded.packageInfo);
   try {
     const installed = await installExtractedPackage(directory, downloaded.packageInfo, { port: options.port });
