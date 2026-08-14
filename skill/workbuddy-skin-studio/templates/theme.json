@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "my-theme",
+  "name": "My Theme",
+  "hero": "hero.png",
+  "colors": {
+    "accent": "#24C9D7",
+    "secondary": "#EF8FD3",
+    "surface": "#F7FBFF",
+    "text": "#17344F"
+  }
+}

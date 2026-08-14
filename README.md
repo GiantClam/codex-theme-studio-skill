@@ -8,6 +8,27 @@ This repository contains the `codex-skin-studio` Codex Skill and its lightweight
 
 This project uses [HeiGeAi/heige-codex-skin-studio](https://github.com/HeiGeAi/heige-codex-skin-studio) as a research and design reference. It is an independent lightweight implementation, not a complete fork with modifications, and does not claim feature parity. The website is now maintained separately in [codex-theme-studio](https://github.com/GiantClam/codex-theme-studio).
 
+## Experimental WorkBuddy Skill
+
+This repository also ships an isolated `workbuddy-skin-studio` Skill for local
+WorkBuddy skin experiments on macOS and Windows. It uses loopback CDP against
+the `renderer/index.html` page and WorkBuddy's observed `--cb-*` variables; it
+does not modify `app.asar`, installed files, signatures, or official JavaScript.
+The adapter is experimental because WorkBuddy does not document a custom-theme
+API and renderer selectors may change between releases.
+
+Build it with:
+
+```bash
+npm run package:workbuddy-skin-studio
+```
+
+The output is `output/workbuddy-skin-studio.skill`. Before applying, run its
+`doctor` command. Applying to a non-debug WorkBuddy instance requires explicit
+restart confirmation; after creating and validating a theme, the Skill asks
+whether the user wants to share it with the community and never uploads without
+explicit consent. Real macOS and Windows validation remains a release gate.
+
 The current application is ChatGPT Desktop. macOS identifies it with bundle identifier `com.openai.codex`. Windows supports the official standalone Codex / ChatGPT Desktop client, including Microsoft Store (MSIX) and conventional executable installs; the runtime discovers the installed app instead of using a user-specific path.
 
 ## Windows Support

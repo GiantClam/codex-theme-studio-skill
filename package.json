@@ -7,6 +7,8 @@
     "test": "node --test test/codex-skin-studio-mvp.test.mjs",
     "test:codex-skin-studio": "node --test test/codex-skin-studio-mvp.test.mjs",
     "test:windows": "node --test test/windows-pet-contract.test.mjs",
-    "package:codex-skin-studio": "node scripts/package-codex-skin-studio.mjs"
+    "package:codex-skin-studio": "node scripts/package-codex-skin-studio.mjs",
+    "test:workbuddy": "node --test test/workbuddy-skin-studio.test.mjs",
+    "package:workbuddy-skin-studio": "node scripts/package-workbuddy-skin-studio.mjs"
   }
 }

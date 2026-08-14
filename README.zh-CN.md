@@ -8,6 +8,20 @@
 
 本项目仅将 [HeiGeAi/heige-codex-skin-studio](https://github.com/HeiGeAi/heige-codex-skin-studio) 作为研究和设计参考，独立实现轻量版本，不是对其完整仓库 Fork 后修改，也不宣称功能完全一致。网站现已独立维护于 [codex-theme-studio](https://github.com/GiantClam/codex-theme-studio)。
 
+## 实验性 WorkBuddy Skill
+
+仓库同时提供隔离的 `workbuddy-skin-studio` Skill，用于在 macOS 和 Windows
+上本地验证 WorkBuddy 换肤。它通过本机回环 CDP 连接
+`renderer/index.html`，使用已观察到的 `--cb-*` 变量，不修改 `app.asar`、安装文件、签名或官方 JavaScript。由于 WorkBuddy 没有公开自定义主题 API，且 Renderer 选择器可能随版本变化，该适配器仍属于实验性能力。
+
+构建命令：
+
+```bash
+npm run package:workbuddy-skin-studio
+```
+
+输出为 `output/workbuddy-skin-studio.skill`。应用前先运行 `doctor`；对普通非调试 WorkBuddy 实例应用主题时，必须明确确认重启。主题创建并校验后，Skill 会询问是否分享到社区，未经明确同意不会上传。真实 macOS 和 Windows 环境验证仍是发布门槛。
+
 当前应用名称是 ChatGPT Desktop。macOS 技术 Bundle ID 为 `com.openai.codex`；Windows 已支持官方独立版 Codex / ChatGPT Desktop 客户端，包括 Microsoft Store（MSIX）安装和普通可执行文件安装。运行时会自动发现客户端，不依赖具体用户名、盘符或 `WindowsApps` 路径。
 
 ## Windows 平台支持
