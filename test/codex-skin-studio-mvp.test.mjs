@@ -202,6 +202,9 @@ test("emits high-contrast workbench tokens for controls, menus, and previews", (
   assert.match(value, /--codex-skin-on-accent: /);
   assert.match(value, /--color-token-dropdown-background: var\(--codex-skin-panel-surface\)/);
   assert.match(value, /--color-token-input-foreground: var\(--codex-skin-text\)/);
+  assert.match(value, /\[data-user-message-bubble\] \{/);
+  assert.match(value, /\[data-user-message-bubble\][\s\S]*background: var\(--codex-skin-panel-surface\) !important/);
+  assert.match(value, /\[data-user-message-bubble\] :is\(p, li, span, code, pre, strong, em, a\)/);
   assert.match(value, /button\.size-token-button-composer\.bg-token-foreground/);
   assert.match(value, /\[data-slot="thread-summary-panel-item-button"\]/);
   assert.match(value, /\[data-testid\*="file" i\]/);

@@ -156,11 +156,27 @@ body[data-application-name="workbuddy"] {
   --cb-vscode-button-hoverBackground: color-mix(in srgb, var(--wb-accent) 84%, #000) !important;
   --cb-vscode-list-hoverBackground: color-mix(in srgb, var(--wb-accent) 16%, transparent) !important;
   --cb-stroke-secondary: color-mix(in srgb, var(--wb-accent) 45%, transparent) !important;
+  --wb-user-message-background: var(--wb-surface);
+  --wb-user-message-text: var(--wb-text);
 }
 #root { color: var(--wb-text) !important; background: linear-gradient(90deg, color-mix(in srgb, var(--wb-surface) 96%, transparent) 0 23%, transparent 52%), linear-gradient(180deg, transparent 0 50%, color-mix(in srgb, var(--wb-surface) 78%, transparent) 100%), url(${JSON.stringify(heroUrl)}) right center / cover no-repeat fixed !important; }
 .teams-container, .teams-container.is-mac, [data-view-id], .conversation-list, .main-content, .main-content--welcome, .sidebar-next { background: transparent !important; }
 [data-view-id="sidebar"] { background: color-mix(in srgb, var(--wb-surface) 88%, transparent) !important; border-right: 1px solid color-mix(in srgb, var(--wb-accent) 45%, transparent) !important; backdrop-filter: blur(18px) saturate(1.1); }
 [data-view-id="main-content"] { background: linear-gradient(180deg, transparent 0 42%, color-mix(in srgb, var(--wb-surface) 74%, transparent) 100%) !important; }
+:is([data-user-message-bubble], [data-message-author-role="user"], [data-message-role="user"], [data-role="user"], .user-message, .user-message-bubble, .chat-message.user, .message.user, .message--user, .conversation-message.user) {
+  color: var(--wb-user-message-text) !important;
+  background: var(--wb-user-message-background) !important;
+  border: 1px solid color-mix(in srgb, var(--wb-accent) 48%, var(--wb-user-message-background)) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px color-mix(in srgb, #000 22%, transparent) !important;
+  isolation: isolate;
+}
+:is([data-user-message-bubble], [data-message-author-role="user"], [data-message-role="user"], [data-role="user"], .user-message, .user-message-bubble, .chat-message.user, .message.user, .message--user, .conversation-message.user) :is(p, li, span, code, pre, strong, em, a) {
+  color: var(--wb-user-message-text) !important;
+}
+:is([data-user-message-bubble], [data-message-author-role="user"], [data-message-role="user"], [data-role="user"], .user-message, .user-message-bubble, .chat-message.user, .message.user, .message--user, .conversation-message.user) a {
+  text-decoration-color: var(--wb-accent) !important;
+}
 ${theme.copy?.brand ? `#root::before { position: fixed; z-index: 20; top: 56px; left: max(300px, 22vw); content: ${JSON.stringify(theme.copy.brand)}; color: var(--wb-accent); font: 800 22px/1.2 system-ui; text-shadow: 0 2px 10px ${surface}; pointer-events: none; }` : ""}
 ${theme.copy?.headline ? `#root::after { position: fixed; z-index: 20; top: 92px; left: max(300px, 22vw); max-width: 42vw; content: ${JSON.stringify(theme.copy.headline)}; color: var(--wb-text); font: 700 30px/1.15 system-ui; text-shadow: 0 2px 12px ${surface}; pointer-events: none; }` : ""}`;
 }

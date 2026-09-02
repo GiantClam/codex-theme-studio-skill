@@ -99,6 +99,11 @@ test("generates WorkBuddy CSS with cb variables and stable anchors", () => {
   assert.match(css, /body\[data-application-name="workbuddy"\]/);
   assert.match(css, /--cb-bg-primary/);
   assert.match(css, /data-view-id="sidebar"/);
+  assert.match(css, /data-user-message-bubble/);
+  assert.match(css, /data-message-author-role="user"/);
+  assert.match(css, /background: var\(--wb-user-message-background\) !important/);
+  assert.match(css, /color: var\(--wb-user-message-text\) !important/);
+  assert.match(css, /border: 1px solid color-mix/);
   assert.match(css, /TEST/);
 });
 

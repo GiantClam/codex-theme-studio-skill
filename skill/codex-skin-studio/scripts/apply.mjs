@@ -742,7 +742,6 @@ body::before {
 }
 
 .composer-surface-chrome,
-[data-user-message-bubble],
 [data-local-conversation-final-assistant],
 [data-codex-approval-surface] {
   color: var(--codex-skin-text) !important;
@@ -750,6 +749,22 @@ body::before {
   background: color-mix(in srgb, var(--codex-skin-surface) 88%, transparent) !important;
   box-shadow: 0 8px 24px color-mix(in srgb, var(--codex-skin-accent) 18%, transparent) !important;
   backdrop-filter: blur(18px) saturate(1.08);
+}
+
+[data-user-message-bubble] {
+  color: var(--codex-skin-text) !important;
+  background: var(--codex-skin-panel-surface) !important;
+  border: 1px solid color-mix(in srgb, var(--codex-skin-accent) 48%, var(--codex-skin-panel-surface)) !important;
+  box-shadow: 0 8px 24px color-mix(in srgb, #000 22%, transparent) !important;
+  isolation: isolate;
+}
+
+[data-user-message-bubble] :is(p, li, span, code, pre, strong, em, a) {
+  color: var(--codex-skin-text) !important;
+}
+
+[data-user-message-bubble] a {
+  text-decoration-color: var(--codex-skin-accent) !important;
 }
 
 button.size-token-button-composer {
