@@ -188,13 +188,32 @@ test("emits dark CSS variables and a quoted hero URL", () => {
   assert.match(value, /color-scheme: dark/);
   assert.match(value, /--codex-skin-accent: #00aaff/);
   assert.match(value, /url\("data:image\/png;base64,AA\\\"BB"\)/);
-  assert.match(value, /linear-gradient\(180deg, transparent 0 40%, color-mix\(in srgb, var\(--codex-skin-surface\) 74%, transparent\) 100%\)/);
-  assert.match(value, /background: color-mix\(in srgb, var\(--codex-skin-surface\) 88%, transparent\)/);
+  assert.match(value, /--codex-skin-reading-surface: color-mix\(in srgb, var\(--codex-skin-surface\) 88%, transparent\)/);
+  assert.match(value, /--codex-skin-main-surface: color-mix\(in srgb, var\(--codex-skin-surface\) 72%, transparent\)/);
+  assert.match(value, /--color-background-surface: var\(--codex-skin-reading-surface\)/);
+  assert.match(value, /html,\nbody \{\n  background: var\(--codex-skin-surface\) !important;/);
+  assert.match(value, /#root::before/);
+  assert.match(value, /#root > \* \{/);
+  assert.doesNotMatch(value, /#root > \* \{\s+position: relative;/);
+  assert.match(value, /\[class~="bg-gradient-to-t"\]\[class~="from-surface"\]\[class~="via-surface"\]/);
+  assert.match(value, /background-image: linear-gradient\(\s+to top,\s+var\(--codex-skin-surface\) 0%,\s+var\(--codex-skin-surface\) 50%,\s+transparent 100%/);
+  assert.match(value, /\.app-shell-left-panel \{[\s\S]*padding-top: 0 !important;/);
+  assert.match(value, /caret-color: var\(--codex-skin-text\) !important;/);
+  assert.match(value, /\.main-surface,[\s\S]*background: var\(--codex-skin-main-surface\) !important/);
+  assert.match(value, /main\[class\*="MainContentSurface" i\]/);
+  assert.match(value, /\.composer-surface-chrome,[\s\S]*background: color-mix\(in srgb, var\(--codex-skin-surface\) 84%, transparent\) !important/);
+  assert.match(value, /\[class\*="ComposerLayoutRoot" i\]/);
+  assert.match(value, /\.text-fade-truncate/);
+  assert.match(value, /\[contenteditable="true"\]/);
+  assert.match(value, /\[class\*="MarkdownRoot" i\]/);
+  assert.match(value, /\[class\*="CodeBlock" i\]/);
+  assert.match(value, /\[class\*="turn-diff-row-padding-y"\]/);
+  assert.match(value, /\[class\*="turn-diff-row-padding-y"\] \:is\(span, div, p, button\)/);
   assert.match(value, /backdrop-filter: blur\(20px\) saturate\(1\.12\)/);
   assert.match(value, /backdrop-filter: blur\(18px\) saturate\(1\.08\)/);
   const expression = styleExpression(validManifest, `data:image/png;base64,${"A".repeat(600001)}`);
   assert.match(expression, /canvas\.toDataURL\("image\/webp", 0\.82\)/);
-  assert.match(expression, /replace\("__CODEX_SKIN_HERO_URL__", heroUrl\)/);
+  assert.match(expression, /replaceAll\("__CODEX_SKIN_HERO_URL__", heroUrl\)/);
 });
 
 test("emits high-contrast workbench tokens for controls, menus, and previews", () => {

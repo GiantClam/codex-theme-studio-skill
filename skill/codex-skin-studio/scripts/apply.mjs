@@ -661,9 +661,11 @@ body::before {
   --codex-skin-on-accent: ${onAccent};
   --codex-skin-control-surface: color-mix(in srgb, var(--codex-skin-surface) 94%, var(--codex-skin-text) 6%);
   --codex-skin-panel-surface: color-mix(in srgb, var(--codex-skin-surface) 98%, var(--codex-skin-text) 2%);
+  --codex-skin-reading-surface: color-mix(in srgb, var(--codex-skin-surface) 88%, transparent);
+  --codex-skin-main-surface: color-mix(in srgb, var(--codex-skin-surface) 72%, transparent);
   --codex-skin-control-hover: color-mix(in srgb, var(--codex-skin-accent) 22%, var(--codex-skin-control-surface) 78%);
   --codex-skin-muted-text: color-mix(in srgb, var(--codex-skin-text) 78%, var(--codex-skin-surface) 22%);
-  --color-background-surface: color-mix(in srgb, var(--codex-skin-surface) 90%, transparent) !important;
+  --color-background-surface: var(--codex-skin-reading-surface) !important;
   --color-background-panel: var(--codex-skin-panel-surface) !important;
   --color-background-control: var(--codex-skin-control-surface) !important;
   --color-background-control-opaque: var(--codex-skin-control-surface) !important;
@@ -722,23 +724,60 @@ body::before {
   --vscode-sideBar-foreground: var(--codex-skin-text) !important;
 }
 
+html,
+body {
+  background: var(--codex-skin-surface) !important;
+}
+
 #root {
   color: var(--codex-skin-text) !important;
+  position: relative;
+  isolation: isolate;
+  background: url(${JSON.stringify(hero)}) right center / cover no-repeat !important;
+}
+
+#root::before {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--codex-skin-surface) 96%, transparent) 0 22%, transparent 46%),
     linear-gradient(180deg, transparent 0 45%, color-mix(in srgb, var(--codex-skin-surface) 78%, transparent) 78% 100%),
-    url(${JSON.stringify(hero)}) right center / cover no-repeat fixed !important;
+    url(${JSON.stringify(hero)}) right center / cover no-repeat !important;
+  content: "";
+  pointer-events: none;
+}
+
+#root > * {
+  z-index: 1;
+}
+
+/* Codex's native conversation fade resolves --surface to white in some desktop builds. */
+#root [class~="bg-gradient-to-t"][class~="from-surface"][class~="via-surface"] {
+  background-image: linear-gradient(
+    to top,
+    var(--codex-skin-surface) 0%,
+    var(--codex-skin-surface) 50%,
+    transparent 100%
+  ) !important;
 }
 
 .app-shell-left-panel {
-  background: color-mix(in srgb, var(--codex-skin-surface) 88%, transparent) !important;
+  background: var(--codex-skin-reading-surface) !important;
   border-right: 1px solid color-mix(in srgb, var(--codex-skin-accent) 45%, transparent) !important;
+  padding-top: 0 !important;
   backdrop-filter: blur(20px) saturate(1.12);
 }
 
 .main-surface,
-.browser-main-surface {
-  background: linear-gradient(180deg, transparent 0 40%, color-mix(in srgb, var(--codex-skin-surface) 74%, transparent) 100%) !important;
+.browser-main-surface,
+main[class*="MainContentSurface" i] {
+  color: var(--codex-skin-text) !important;
+  background: var(--codex-skin-main-surface) !important;
+}
+
+main[class*="MainContentSurface" i] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, code, pre, strong, em, a) {
+  color: var(--codex-skin-text) !important;
 }
 
 .composer-surface-chrome,
@@ -746,9 +785,45 @@ body::before {
 [data-codex-approval-surface] {
   color: var(--codex-skin-text) !important;
   border-color: color-mix(in srgb, var(--codex-skin-accent) 48%, transparent) !important;
-  background: color-mix(in srgb, var(--codex-skin-surface) 88%, transparent) !important;
+  background: color-mix(in srgb, var(--codex-skin-surface) 84%, transparent) !important;
   box-shadow: 0 8px 24px color-mix(in srgb, var(--codex-skin-accent) 18%, transparent) !important;
   backdrop-filter: blur(18px) saturate(1.08);
+}
+
+[class*="ComposerLayoutRoot" i] {
+  color: var(--codex-skin-text) !important;
+  background: color-mix(in srgb, var(--codex-skin-surface) 92%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--codex-skin-accent) 42%, transparent) !important;
+  backdrop-filter: blur(18px) saturate(1.08);
+}
+
+#root :is(textarea, [contenteditable="true"], .ProseMirror, [class*="RichTextInput" i]),
+#root :is(button:not([aria-haspopup="menu"]), [role="button"], [role="menuitem"]),
+#root :is(button:not([aria-haspopup="menu"]), [role="button"], [role="menuitem"]) :is(span, div, p),
+#root :is(.sidebar-item, .text-fade-truncate, [class*="section-toggle" i]) {
+  color: var(--codex-skin-text) !important;
+  caret-color: var(--codex-skin-text) !important;
+}
+
+#root [class*="MarkdownRoot" i] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, code, pre, strong, em, a) {
+  color: var(--codex-skin-text) !important;
+}
+
+#root :is([class*="CodeBlock" i], [class*="StickyActionBar" i]) {
+  color: var(--codex-skin-text) !important;
+  background: var(--codex-skin-control-surface) !important;
+  border-color: color-mix(in srgb, var(--codex-skin-accent) 38%, var(--codex-skin-control-surface)) !important;
+}
+
+/* File-change cards retain native light-mode tokens unless their dedicated surface is reset. */
+#root [class*="turn-diff-row-padding-y"] {
+  color: var(--codex-skin-text) !important;
+  background: var(--codex-skin-panel-surface) !important;
+  border: 1px solid color-mix(in srgb, var(--codex-skin-accent) 42%, var(--codex-skin-panel-surface)) !important;
+}
+
+#root [class*="turn-diff-row-padding-y"] :is(span, div, p, button) {
+  color: var(--codex-skin-text) !important;
 }
 
 [data-user-message-bubble] {
@@ -1257,7 +1332,7 @@ function styleExpression(theme, hero, logo = null, polaroid = null, themes = [])
   const logoLoad = logo ? `const logoImage = new Image(); logoImage.src = ${JSON.stringify(logo)}; await logoImage.decode();` : "";
   const polaroidLoad = polaroid ? `const polaroidImage = new Image(); polaroidImage.src = ${JSON.stringify(polaroid)}; await polaroidImage.decode();` : "";
   const heroCompression = hero.length > 600000 ? `let heroUrl = heroImage.src; try { const maxDimension = 1600; const scale = Math.min(1, maxDimension / heroImage.naturalWidth, maxDimension / heroImage.naturalHeight); const canvas = document.createElement("canvas"); canvas.width = Math.max(1, Math.round(heroImage.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(heroImage.naturalHeight * scale)); const context = canvas.getContext("2d"); context.drawImage(heroImage, 0, 0, canvas.width, canvas.height); const compressed = canvas.toDataURL("image/webp", 0.82); if (compressed.startsWith("data:image/") && compressed.length < heroUrl.length) heroUrl = compressed; } catch {}` : `const heroUrl = heroImage.src;`;
-  return `(async () => { const previous = document.getElementById(${JSON.stringify(STYLE_ID)}); const snapshot = previous ? { present: true, textContent: previous.textContent, themeId: previous.dataset.themeId ?? null, heroLoaded: previous.dataset.heroLoaded ?? null, logoLoaded: previous.dataset.logoLoaded ?? null, polaroidLoaded: previous.dataset.polaroidLoaded ?? null } : { present: false }; const result = { rollback: snapshot }; try { const heroImage = new Image(); heroImage.src = ${JSON.stringify(hero)}; await heroImage.decode(); ${heroCompression} ${logoLoad} ${polaroidLoad} let node = previous; if (!node) { node = document.createElement("style"); node.id = ${JSON.stringify(STYLE_ID)}; document.head.appendChild(node); } node.dataset.themeId = ${JSON.stringify(theme.id)}; node.dataset.heroLoaded = "true"; node.dataset.logoLoaded = ${JSON.stringify(Boolean(logo))}; node.dataset.polaroidLoaded = ${JSON.stringify(Boolean(polaroid))}; node.textContent = ${JSON.stringify(style)}.replace(${JSON.stringify(HERO_URL_TOKEN)}, heroUrl); ${switcherExpression(themes)} const root = document.getElementById("root"); const computed = root ? getComputedStyle(root) : null; return { ...result, connected: Boolean(node.isConnected), themeId: node.dataset.themeId, heroLoaded: node.dataset.heroLoaded === "true", logoLoaded: node.dataset.logoLoaded === "true", polaroidLoaded: node.dataset.polaroidLoaded === "true", cssText: node.textContent.trim(), cssRules: node.sheet ? node.sheet.cssRules.length : 0, rootBackground: Boolean(computed && computed.backgroundImage && computed.backgroundImage !== "none") }; } catch (error) { return { ...result, error: String(error?.message || error) }; } })()`;
+  return `(async () => { const previous = document.getElementById(${JSON.stringify(STYLE_ID)}); const snapshot = previous ? { present: true, textContent: previous.textContent, themeId: previous.dataset.themeId ?? null, heroLoaded: previous.dataset.heroLoaded ?? null, logoLoaded: previous.dataset.logoLoaded ?? null, polaroidLoaded: previous.dataset.polaroidLoaded ?? null } : { present: false }; const result = { rollback: snapshot }; try { const heroImage = new Image(); heroImage.src = ${JSON.stringify(hero)}; await heroImage.decode(); ${heroCompression} ${logoLoad} ${polaroidLoad} let node = previous; if (!node) { node = document.createElement("style"); node.id = ${JSON.stringify(STYLE_ID)}; document.head.appendChild(node); } node.dataset.themeId = ${JSON.stringify(theme.id)}; node.dataset.heroLoaded = "true"; node.dataset.logoLoaded = ${JSON.stringify(Boolean(logo))}; node.dataset.polaroidLoaded = ${JSON.stringify(Boolean(polaroid))}; node.textContent = ${JSON.stringify(style)}.replaceAll(${JSON.stringify(HERO_URL_TOKEN)}, heroUrl); ${switcherExpression(themes)} const root = document.getElementById("root"); const computed = root ? getComputedStyle(root) : null; return { ...result, connected: Boolean(node.isConnected), themeId: node.dataset.themeId, heroLoaded: node.dataset.heroLoaded === "true", logoLoaded: node.dataset.logoLoaded === "true", polaroidLoaded: node.dataset.polaroidLoaded === "true", cssText: node.textContent.trim(), cssRules: node.sheet ? node.sheet.cssRules.length : 0, rootBackground: Boolean(computed && computed.backgroundImage && computed.backgroundImage !== "none") }; } catch (error) { return { ...result, error: String(error?.message || error) }; } })()`;
 }
 function restoreStyleExpression(snapshot) {
   return `(() => { const node = document.getElementById(${JSON.stringify(STYLE_ID)}); const snapshot = ${JSON.stringify(snapshot)}; if (!snapshot.present) { node?.remove(); return node && node.isConnected ? 0 : 1; } const restored = node || document.createElement("style"); restored.id = ${JSON.stringify(STYLE_ID)}; if (!restored.isConnected) document.head.appendChild(restored); restored.textContent = snapshot.textContent; for (const key of ["themeId", "heroLoaded", "logoLoaded", "polaroidLoaded"]) { const value = snapshot[key] ?? null; if (value === null) delete restored.dataset[key]; else restored.dataset[key] = value; } return restored.isConnected && restored.textContent === snapshot.textContent && (restored.dataset.themeId ?? null) === snapshot.themeId && (restored.dataset.heroLoaded ?? null) === snapshot.heroLoaded && (restored.dataset.logoLoaded ?? null) === (snapshot.logoLoaded ?? null) && (restored.dataset.polaroidLoaded ?? null) === (snapshot.polaroidLoaded ?? null) ? 1 : 0; })()`;
