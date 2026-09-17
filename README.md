@@ -57,6 +57,7 @@ privileges.
 - The `Skins` menu refreshes valid local themes on open and in the background, so newly created themes appear without restarting ChatGPT Desktop.
 - Oversized raster Heroes are decoded and compressed to a smaller WebP data URL before CSS injection, avoiding stylesheet limits that can silently drop the background rule.
 - Theme creation also converts the final Hero, logo, and portrait assets to `.webp` on disk and updates `theme.json` automatically.
+- High-contrast native workbench treatment for composer icons, model menus, activity labels, file-change cards, and Markdown tables.
 - Contract-driven Pet generation: cartoonized, anthropomorphic, large-head/small-body companions assembled into validated Codex V2 8x11 RGBA PNG/WebP atlases with 16 look directions.
 - Paired theme + Pet bundles with atomic Pet installation, local status reporting, and one switch command that applies the theme and attempts native Pets Refresh and selection.
 - No `app.asar` modification, code-signature changes, database, remote service, or arbitrary theme CSS.
@@ -320,6 +321,8 @@ The hero must not contain fake menus, buttons, chat bubbles, code, text, waterma
 ## Readability and contrast
 
 The runtime owns the readability layer. It maps the selected theme to ChatGPT Desktop control tokens and uses opaque theme-derived surfaces for the composer, send button, menus, dialogs, right-side file or document previews, selected items, and focus states. Accent buttons receive a foreground chosen for contrast against the accent color instead of always using white. This keeps live UI readable even when the hero image is bright or visually dense.
+
+The injected stylesheet also corrects native desktop components that retain light-mode tokens after the theme changes: composer icon buttons and their SVGs, model menus, thinking and activity labels, file-change cards, and Markdown tables. Table headers and cells receive theme-derived surfaces, readable foreground text, and visible separators. The rules are scoped to the relevant renderer surfaces so semantic controls such as stop actions keep their native state treatment.
 
 ## One-Shot Theme Creation And Apply
 
