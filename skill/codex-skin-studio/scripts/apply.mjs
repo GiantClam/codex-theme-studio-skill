@@ -665,6 +665,7 @@ body::before {
   --codex-skin-main-surface: color-mix(in srgb, var(--codex-skin-surface) 72%, transparent);
   --codex-skin-control-hover: color-mix(in srgb, var(--codex-skin-accent) 22%, var(--codex-skin-control-surface) 78%);
   --codex-skin-muted-text: color-mix(in srgb, var(--codex-skin-text) 78%, var(--codex-skin-surface) 22%);
+  --codex-skin-titlebar-height: 46px;
   --color-background-surface: var(--codex-skin-reading-surface) !important;
   --color-background-panel: var(--codex-skin-panel-surface) !important;
   --color-background-control: var(--codex-skin-control-surface) !important;
@@ -765,7 +766,7 @@ body {
 .app-shell-left-panel {
   background: var(--codex-skin-reading-surface) !important;
   border-right: 1px solid color-mix(in srgb, var(--codex-skin-accent) 45%, transparent) !important;
-  padding-top: 0 !important;
+  padding-top: var(--codex-skin-titlebar-height) !important;
   backdrop-filter: blur(20px) saturate(1.12);
 }
 
@@ -774,6 +775,17 @@ body {
 main[class*="MainContentSurface" i] {
   color: var(--codex-skin-text) !important;
   background: var(--codex-skin-main-surface) !important;
+}
+
+#root main.bg-surface,
+#root :is(webview, iframe).bg-surface {
+  color: var(--codex-skin-text) !important;
+  background: var(--codex-skin-panel-surface) !important;
+}
+
+#root main.bg-surface :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, code, pre, strong, em, a, span, button) {
+  color: var(--codex-skin-text) !important;
+  -webkit-text-fill-color: var(--codex-skin-text) !important;
 }
 
 main[class*="MainContentSurface" i] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, code, pre, strong, em, a) {
@@ -858,6 +870,10 @@ body :is([role="menu"], [role="listbox"]) :is(span, div, p, button, [role="menui
 #root [class*="text-codex-description"] {
   color: var(--codex-skin-text) !important;
   -webkit-text-fill-color: var(--codex-skin-text) !important;
+}
+
+#root [class*="MarkdownRoot" i] {
+  color: var(--codex-skin-text) !important;
 }
 
 #root [class*="MarkdownRoot" i] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, code, pre, strong, em, a) {
@@ -948,6 +964,17 @@ button.size-token-button-composer.bg-token-button-background svg {
   background: var(--codex-skin-panel-surface) !important;
   border-color: color-mix(in srgb, var(--codex-skin-accent) 58%, var(--codex-skin-panel-surface)) !important;
   box-shadow: 0 16px 42px color-mix(in srgb, var(--codex-skin-surface) 58%, transparent) !important;
+}
+
+#root .bg-surface-elevated-secondary:has([data-slot="thread-summary-panel-item-button"]) {
+  color: var(--codex-skin-text) !important;
+  background: var(--codex-skin-panel-surface) !important;
+  border-color: color-mix(in srgb, var(--codex-skin-accent) 52%, var(--codex-skin-panel-surface)) !important;
+}
+
+#root .bg-surface-elevated-secondary:has([data-slot="thread-summary-panel-item-button"]) :is(header, button, span, p, a, svg, [data-slot*="thread-summary-panel" i]) {
+  color: var(--codex-skin-text) !important;
+  -webkit-text-fill-color: var(--codex-skin-text) !important;
 }
 
 [role="menuitem"],

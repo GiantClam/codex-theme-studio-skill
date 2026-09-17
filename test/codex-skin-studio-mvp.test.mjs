@@ -197,10 +197,14 @@ test("emits dark CSS variables and a quoted hero URL", () => {
   assert.doesNotMatch(value, /#root > \* \{\s+position: relative;/);
   assert.match(value, /\[class~="bg-gradient-to-t"\]\[class~="from-surface"\]\[class~="via-surface"\]/);
   assert.match(value, /background-image: linear-gradient\(\s+to top,\s+var\(--codex-skin-surface\) 0%,\s+var\(--codex-skin-surface\) 50%,\s+transparent 100%/);
-  assert.match(value, /\.app-shell-left-panel \{[\s\S]*padding-top: 0 !important;/);
+  assert.match(value, /--codex-skin-titlebar-height: 46px;/);
+  assert.match(value, /\.app-shell-left-panel \{[\s\S]*padding-top: var\(--codex-skin-titlebar-height\) !important;/);
   assert.match(value, /caret-color: var\(--codex-skin-text\) !important;/);
   assert.match(value, /\.main-surface,[\s\S]*background: var\(--codex-skin-main-surface\) !important/);
   assert.match(value, /main\[class\*="MainContentSurface" i\]/);
+  assert.match(value, /#root main\.bg-surface,/);
+  assert.match(value, /#root :is\(webview, iframe\)\.bg-surface \{/);
+  assert.match(value, /#root main\.bg-surface :is\(p, li, h1, h2, h3, h4, h5, h6, blockquote, code, pre, strong, em, a, span, button\)/);
   assert.match(value, /\.composer-surface-chrome,[\s\S]*background: color-mix\(in srgb, var\(--codex-skin-surface\) 84%, transparent\) !important/);
   assert.match(value, /#root \[class\*="ComposerLayoutRoot" i\] \{[\s\S]*background: var\(--codex-skin-control-surface\) !important/);
   assert.match(value, /ComposerLayoutRoot" i\]:focus-within/);
@@ -219,6 +223,7 @@ test("emits dark CSS variables and a quoted hero URL", () => {
   assert.match(value, /\[class~="group\/activity-header"\]/);
   assert.match(value, /\[class\*="text-codex-description"\]/);
   assert.match(value, /\[class\*="MarkdownRoot" i\]/);
+  assert.match(value, /#root \[class\*="MarkdownRoot" i\] \{[\s\S]*color: var\(--codex-skin-text\) !important/);
   assert.match(value, /MarkdownRoot" i\] table \{/);
   assert.match(value, /MarkdownRoot" i\] :is\(th, td\) \{/);
   assert.match(value, /MarkdownRoot" i\] :is\(th, td\) :is\(p, li, span, code, pre, strong, em, a\)/);
@@ -241,6 +246,8 @@ test("emits high-contrast workbench tokens for controls, menus, and previews", (
   assert.match(value, /\[data-user-message-bubble\][\s\S]*background: var\(--codex-skin-panel-surface\) !important/);
   assert.match(value, /\[data-user-message-bubble\] :is\(p, li, span, code, pre, strong, em, a\)/);
   assert.match(value, /button\.size-token-button-composer\.bg-token-foreground/);
+  assert.match(value, /\.bg-surface-elevated-secondary:has\(\[data-slot="thread-summary-panel-item-button"\]\)/);
+  assert.match(value, /thread-summary-panel-item-button"\]\) :is\(header, button, span, p, a, svg, \[data-slot\*="thread-summary-panel" i\]\)/);
   assert.match(value, /\[data-slot="thread-summary-panel-item-button"\]/);
   assert.match(value, /\[data-testid\*="file" i\]/);
   assert.match(value, /::selection/);
