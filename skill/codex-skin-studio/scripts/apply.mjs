@@ -790,11 +790,49 @@ main[class*="MainContentSurface" i] :is(p, li, h1, h2, h3, h4, h5, h6, blockquot
   backdrop-filter: blur(18px) saturate(1.08);
 }
 
-[class*="ComposerLayoutRoot" i] {
+#root [class*="ComposerLayoutRoot" i] {
   color: var(--codex-skin-text) !important;
-  background: color-mix(in srgb, var(--codex-skin-surface) 92%, transparent) !important;
-  border: 1px solid color-mix(in srgb, var(--codex-skin-accent) 42%, transparent) !important;
-  backdrop-filter: blur(18px) saturate(1.08);
+  background: var(--codex-skin-control-surface) !important;
+  outline: 1px solid color-mix(in srgb, var(--codex-skin-accent) 62%, var(--codex-skin-control-surface)) !important;
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--codex-skin-surface) 58%, transparent) !important;
+}
+
+#root [class*="ComposerLayoutRoot" i]:focus-within {
+  outline-color: var(--codex-skin-accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--codex-skin-accent) 22%, transparent), 0 12px 30px color-mix(in srgb, var(--codex-skin-surface) 62%, transparent) !important;
+}
+
+#root [class*="ModelPickerTrigger" i],
+#root [class*="ModelPickerTrigger" i] :is(span, div, p, button) {
+  color: var(--codex-skin-text) !important;
+  -webkit-text-fill-color: var(--codex-skin-text) !important;
+}
+
+body :is([role="menu"], [role="listbox"]) {
+  color: var(--codex-skin-text) !important;
+  background: var(--codex-skin-panel-surface) !important;
+  border: 1px solid color-mix(in srgb, var(--codex-skin-accent) 48%, var(--codex-skin-panel-surface)) !important;
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--codex-skin-surface) 62%, transparent) !important;
+}
+
+body :is([role="menu"], [role="listbox"]) :is(span, div, p, button, [role="menuitem"], [role="option"]) {
+  color: var(--codex-skin-text) !important;
+  -webkit-text-fill-color: var(--codex-skin-text) !important;
+}
+
+#root [class*="ComposerLayoutRoot" i] button.aspect-square {
+  color: var(--codex-skin-text) !important;
+  background: color-mix(in srgb, var(--codex-skin-control-surface) 88%, var(--codex-skin-text) 12%) !important;
+  border-color: color-mix(in srgb, var(--codex-skin-accent) 48%, var(--codex-skin-control-surface)) !important;
+}
+
+#root [class*="ComposerLayoutRoot" i] button.aspect-square svg {
+  color: var(--codex-skin-text) !important;
+}
+
+#root [class*="ComposerLayoutRoot" i] button.aspect-square:hover:not(:disabled) {
+  background: var(--codex-skin-control-hover) !important;
+  border-color: var(--codex-skin-accent) !important;
 }
 
 #root :is(textarea, [contenteditable="true"], .ProseMirror, [class*="RichTextInput" i]),
@@ -805,8 +843,47 @@ main[class*="MainContentSurface" i] :is(p, li, h1, h2, h3, h4, h5, h6, blockquot
   caret-color: var(--codex-skin-text) !important;
 }
 
+/* Native thinking and tool activity labels use a low-opacity text shimmer. */
+#root .loading-shimmer-pure-text {
+  color: var(--codex-skin-text) !important;
+  -webkit-text-fill-color: var(--codex-skin-text) !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  background: none !important;
+  animation: none !important;
+}
+
+#root [class~="group/activity-header"],
+#root [class~="group/activity-header"] :is(span, div, p),
+#root [class*="text-codex-description"] {
+  color: var(--codex-skin-text) !important;
+  -webkit-text-fill-color: var(--codex-skin-text) !important;
+}
+
 #root [class*="MarkdownRoot" i] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, code, pre, strong, em, a) {
   color: var(--codex-skin-text) !important;
+}
+
+/* Native Markdown tables set direct light-mode foreground and separator tokens. */
+#root [class*="MarkdownRoot" i] table {
+  color: var(--codex-skin-text) !important;
+  background: var(--codex-skin-panel-surface) !important;
+  border-color: color-mix(in srgb, var(--codex-skin-accent) 42%, var(--codex-skin-panel-surface)) !important;
+}
+
+#root [class*="MarkdownRoot" i] :is(th, td) {
+  color: var(--codex-skin-text) !important;
+  background: var(--codex-skin-panel-surface) !important;
+  border-color: color-mix(in srgb, var(--codex-skin-accent) 42%, var(--codex-skin-panel-surface)) !important;
+}
+
+#root [class*="MarkdownRoot" i] th {
+  background: var(--codex-skin-control-surface) !important;
+}
+
+#root [class*="MarkdownRoot" i] :is(th, td) :is(p, li, span, code, pre, strong, em, a) {
+  color: var(--codex-skin-text) !important;
+  -webkit-text-fill-color: var(--codex-skin-text) !important;
 }
 
 #root :is([class*="CodeBlock" i], [class*="StickyActionBar" i]) {
